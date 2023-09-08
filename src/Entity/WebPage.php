@@ -2,13 +2,23 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\WebPageRepository;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
+#[ApiResource(
+    graphQlOperations: [
+        new QueryCollection(paginationEnabled: false)
+    ]
+)]
 #[ORM\Entity(repositoryClass: WebPageRepository::class)]
 class WebPage
 {
@@ -50,6 +60,16 @@ class WebPage
     public function __toString(): string
     {
         return $this->label;
+    }
+
+    #[Assert\Callback]
+    public function validate(ExecutionContextInterface $context, mixed $payload): void
+    {
+        if (@preg_match($this->regexp, null) === false) {
+            $context->buildViolation('Invalid regular expression!')
+                ->atPath('regexp')
+                ->addViolation();
+        }
     }
 
     public function getId(): ?int
@@ -187,5 +207,23 @@ class WebPage
         }
 
         return $this;
+    }
+
+    public function getLastExecutionTime(): ?DateTimeImmutable
+    {
+        $execution = $this->getExecutions()->last();
+        if (!$execution) {
+            return null;
+        }
+        return $execution->getEndTime() ?? $execution->getStartTime();
+    }
+
+    public function getLastExecutionStatus(): ?ExecutionStatus
+    {
+        $execution = $this->getExecutions()->last();
+        if (!$execution) {
+            return null;
+        }
+        return $execution->last()->getStatus();
     }
 }

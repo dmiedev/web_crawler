@@ -3,14 +3,15 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Execution;
+use App\Entity\ExecutionStatus;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
 class ExecutionCrudController extends AbstractCrudController
 {
@@ -23,7 +24,8 @@ class ExecutionCrudController extends AbstractCrudController
     {
         return [
             AssociationField::new('webPage'),
-            ChoiceField::new('status'),
+            ChoiceField::new('status')
+                ->setChoices(ExecutionStatus::cases()),
             DateTimeField::new('startTime'),
             DateTimeField::new('endTime'),
             IntegerField::new('crawledCount'),
@@ -32,7 +34,11 @@ class ExecutionCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-         // return $actions->disable(Action::NEW);
-        return $actions;
+         return $actions->disable(Action::NEW, Action::EDIT, Action::DELETE);
+    }
+
+    public function configureFilters(Filters $filters): Filters
+    {
+        return $filters->add('webPage');
     }
 }

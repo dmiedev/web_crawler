@@ -1,4 +1,5 @@
 WebPage: Web Page
+Web Page: Web Page
 Web Pages: Web Pages
 Executions: Executions
 Label: Label
@@ -9,3 +10,10 @@ Tags: Tags
 Active: Active
 Last Execution Time: Last Execution Time
 Last Execution Status: Last Execution Status
+Execution: Execution
+Status: Status
+Start Time: Start Time
+End Time: End Time
+Crawled Count: Crawled Count
+Running: Running
+Finished: Finished

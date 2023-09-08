@@ -21,6 +21,16 @@ class NodeRepository extends ServiceEntityRepository
         parent::__construct($registry, Node::class);
     }
 
+    public function findByWebPageIds(array $ids): array
+    {
+        return $this->createQueryBuilder('n')
+            ->leftJoin('n.owner', 'wp')
+            ->andWhere('wp.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+    }
+
 //    /**
 //     * @return Node[] Returns an array of Node objects
 //     */

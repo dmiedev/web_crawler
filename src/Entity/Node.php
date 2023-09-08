@@ -2,12 +2,26 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\NodeRepository;
+use App\Resolver\NodeCollectionResolver;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ApiResource(
+    shortName: 'WebPageNode',
+    operations: [],
+    graphQlOperations: [
+        new QueryCollection(
+            resolver: NodeCollectionResolver::class,
+            args: ['webPages' => ['type' => '[ID!]']],
+            paginationEnabled: false,
+        ),
+    ],
+)]
 #[ORM\Entity(repositoryClass: NodeRepository::class)]
 class Node
 {

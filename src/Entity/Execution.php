@@ -2,10 +2,12 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Metadata\ApiResource;
 use App\Repository\ExecutionRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ApiResource(graphQlOperations: [])]
 #[ORM\Entity(repositoryClass: ExecutionRepository::class)]
 class Execution
 {
@@ -47,14 +49,20 @@ class Execution
         return $this;
     }
 
-    public function getStatus(): ?string
+    public function getStatus(): ?ExecutionStatus
     {
-        return $this->status;
+        if ($this->status != null) {
+            return ExecutionStatus::tryFrom($this->status);
+        }
+        return null;
     }
 
-    public function setStatus(string $status): static
+    public function setStatus(?string $status): static
     {
-        $this->status = $status;
+        $newStatus = ExecutionStatus::tryFrom($status);
+        if ($newStatus != null) {
+            $this->status = $newStatus->value;
+        }
 
         return $this;
     }
