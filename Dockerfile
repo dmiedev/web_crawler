@@ -32,6 +32,7 @@ COPY --from=php_extension_installer_upstream --link /usr/bin/install-php-extensi
 
 RUN set -eux; \
     install-php-extensions \
+        amqp \
 		apcu \
 		intl \
 		opcache \

@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "api-platform/core",
-            "version": "v3.1.16",
+            "version": "v3.1.17",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/core.git",
-                "reference": "9fa59e23f9000d6016aef00fad5b5cd72ac07919"
+                "reference": "850f7356b6732d0edccf3ee773113c457afc771e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/core/zipball/9fa59e23f9000d6016aef00fad5b5cd72ac07919",
-                "reference": "9fa59e23f9000d6016aef00fad5b5cd72ac07919",
+                "url": "https://api.github.com/repos/api-platform/core/zipball/850f7356b6732d0edccf3ee773113c457afc771e",
+                "reference": "850f7356b6732d0edccf3ee773113c457afc771e",
                 "shasum": ""
             },
             "require": {
@@ -31,6 +31,7 @@
                 "symfony/property-access": "^6.1",
                 "symfony/property-info": "^6.1",
                 "symfony/serializer": "^6.1",
+                "symfony/translation-contracts": "^3.3",
                 "symfony/web-link": "^6.1",
                 "willdurand/negotiation": "^3.0"
             },
@@ -165,7 +166,7 @@
             ],
             "support": {
                 "issues": "https://github.com/api-platform/core/issues",
-                "source": "https://github.com/api-platform/core/tree/v3.1.16"
+                "source": "https://github.com/api-platform/core/tree/v3.1.17"
             },
             "funding": [
                 {
@@ -173,7 +174,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2023-09-02T07:06:13+00:00"
+            "time": "2023-09-08T14:11:23+00:00"
         },
         {
             "name": "doctrine/cache",
@@ -1491,16 +1492,16 @@
         },
         {
             "name": "easycorp/easyadmin-bundle",
-            "version": "v4.7.2",
+            "version": "v4.7.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/EasyCorp/EasyAdminBundle.git",
-                "reference": "67039f70c5a305aa8dca1b5eac5a18f11f22d969"
+                "reference": "60e04377612ce4d63ad833209127541caaf7e93b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/EasyCorp/EasyAdminBundle/zipball/67039f70c5a305aa8dca1b5eac5a18f11f22d969",
-                "reference": "67039f70c5a305aa8dca1b5eac5a18f11f22d969",
+                "url": "https://api.github.com/repos/EasyCorp/EasyAdminBundle/zipball/60e04377612ce4d63ad833209127541caaf7e93b",
+                "reference": "60e04377612ce4d63ad833209127541caaf7e93b",
                 "shasum": ""
             },
             "require": {
@@ -1573,7 +1574,7 @@
             ],
             "support": {
                 "issues": "https://github.com/EasyCorp/EasyAdminBundle/issues",
-                "source": "https://github.com/EasyCorp/EasyAdminBundle/tree/v4.7.2"
+                "source": "https://github.com/EasyCorp/EasyAdminBundle/tree/v4.7.6"
             },
             "funding": [
                 {
@@ -1581,7 +1582,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2023-08-07T18:45:38+00:00"
+            "time": "2023-09-07T06:13:39+00:00"
         },
         {
             "name": "egulias/email-validator",
@@ -1983,16 +1984,16 @@
         },
         {
             "name": "phpstan/phpdoc-parser",
-            "version": "1.23.1",
+            "version": "1.24.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpdoc-parser.git",
-                "reference": "846ae76eef31c6d7790fac9bc399ecee45160b26"
+                "reference": "3510b0a6274cc42f7219367cb3abfc123ffa09d6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/846ae76eef31c6d7790fac9bc399ecee45160b26",
-                "reference": "846ae76eef31c6d7790fac9bc399ecee45160b26",
+                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/3510b0a6274cc42f7219367cb3abfc123ffa09d6",
+                "reference": "3510b0a6274cc42f7219367cb3abfc123ffa09d6",
                 "shasum": ""
             },
             "require": {
@@ -2024,9 +2025,9 @@
             "description": "PHPDoc parser with support for nullable, intersection and generic types",
             "support": {
                 "issues": "https://github.com/phpstan/phpdoc-parser/issues",
-                "source": "https://github.com/phpstan/phpdoc-parser/tree/1.23.1"
+                "source": "https://github.com/phpstan/phpdoc-parser/tree/1.24.0"
             },
-            "time": "2023-08-03T16:32:59+00:00"
+            "time": "2023-09-07T20:46:32+00:00"
         },
         {
             "name": "psr/cache",

@@ -1,9 +1,5 @@
 # WebCrawler
 
-## Installation
-
-Install Docker, PHP 8 with ampq extension.
-
 ## Running
 
 ```
