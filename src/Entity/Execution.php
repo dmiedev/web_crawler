@@ -67,6 +67,11 @@ class Execution
         return $this;
     }
 
+    public function setStatusEnum(ExecutionStatus $status): static
+    {
+        return $this->setStatus($status->value);
+    }
+
     public function getStartTime(): ?DateTimeImmutable
     {
         return $this->startTime;

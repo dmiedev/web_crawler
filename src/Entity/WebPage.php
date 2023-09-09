@@ -5,6 +5,7 @@ namespace App\Entity;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GraphQl\QueryCollection;
 use App\Repository\WebPageRepository;
+use DateInterval;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -140,6 +141,16 @@ class WebPage
     public function getPeriodicity(): ?DateTimeInterface
     {
         return $this->periodicity;
+    }
+
+    public function getPeriodicityInterval(): ?DateInterval
+    {
+        if ($this->periodicity == null) {
+            return null;
+        }
+        $hours = $this->periodicity->format('H');
+        $minutes = $this->periodicity->format('i');
+        return DateInterval::createFromDateString($hours . ' hours + ' . $minutes . ' minutes');
     }
 
     public function setPeriodicity(DateTimeInterface $periodicity): static

@@ -3,6 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Execution;
+use App\Entity\ExecutionStatus;
+use App\Entity\WebPage;
+use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,6 +22,21 @@ class ExecutionRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Execution::class);
+    }
+
+    public function createNewExecution(WebPage $webPage): Execution
+    {
+        $execution = (new Execution())
+            ->setWebPage($webPage)
+            ->setStartTime(new DateTimeImmutable())
+            ->setStatusEnum(ExecutionStatus::Running)
+            ->setCrawledCount(0);
+
+        $em = $this->getEntityManager();
+        $em->persist($execution);
+        $em->flush();
+
+        return $execution;
     }
 
 //    /**

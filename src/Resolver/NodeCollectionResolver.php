@@ -8,9 +8,7 @@ use App\Repository\NodeRepository;
 
 class NodeCollectionResolver implements QueryCollectionResolverInterface
 {
-    public function __construct(private readonly NodeRepository $nodeRepository)
-    {
-    }
+    public function __construct(private readonly NodeRepository $nodeRepository) {}
 
     /**
      * @param iterable<Node> $collection
