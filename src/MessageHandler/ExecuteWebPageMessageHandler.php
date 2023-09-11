@@ -53,7 +53,10 @@ class ExecuteWebPageMessageHandler implements LoggerAwareInterface
         }
 
         $this->logger->info('Starting a process for web page crawling.', ['webPageId' => $webPageId]);
-        $process = new Process(['bin/console', 'app:crawl-web-page', $message->getWebPageId()], $this->projectDir);
+        $process = new Process(
+            ['php', 'bin/console', 'app:crawl-web-page', $message->getWebPageId()],
+            $this->projectDir,
+        );
         $process->start();
     }
 }

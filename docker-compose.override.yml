@@ -30,6 +30,22 @@ services:
     environment:
       MERCURE_EXTRA_DIRECTIVES: demo
 
+  php-zts:
+    command: ["php", "bin/console", "messenger:consume", "async", "-vv"]
+    build:
+      context: .
+      target: php_zts_dev
+    volumes:
+      - ./:/srv/app
+      - ./docker/php/conf.d/app.dev.ini:/usr/local/etc/php/conf.d/app.dev.ini:ro
+    environment:
+      # See https://xdebug.org/docs/all_settings#mode
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+    extra_hosts:
+      # Ensure that host.docker.internal is correctly defined on Linux
+      - host.docker.internal:host-gateway
+
+
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 

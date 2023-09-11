@@ -236,6 +236,6 @@ class WebPage
         if (!$execution) {
             return null;
         }
-        return $execution->last()->getStatus();
+        return $execution->getStatus();
     }
 }
