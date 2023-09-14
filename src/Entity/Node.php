@@ -61,7 +61,7 @@ class Node
         return $this->title;
     }
 
-    public function setTitle(string $title): static
+    public function setTitle(?string $title): static
     {
         $this->title = $title;
 
@@ -85,7 +85,7 @@ class Node
         return $this->crawlTime;
     }
 
-    public function setCrawlTime(DateTimeImmutable $crawlTime): static
+    public function setCrawlTime(?DateTimeImmutable $crawlTime): static
     {
         $this->crawlTime = $crawlTime;
 
@@ -112,7 +112,7 @@ class Node
         return $this->links;
     }
 
-    public function addLink(self $link): static
+    public function addLink(Node $link): static
     {
         if (!$this->links->contains($link)) {
             $this->links->add($link);
@@ -121,7 +121,7 @@ class Node
         return $this;
     }
 
-    public function removeLink(self $link): static
+    public function removeLink(Node $link): static
     {
         $this->links->removeElement($link);
 

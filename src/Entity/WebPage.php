@@ -154,6 +154,16 @@ class WebPage
         return DateInterval::createFromDateString($hours . ' hours + ' . $minutes . ' minutes');
     }
 
+    public function getPeriodicityMillis(): ?int
+    {
+        if ($this->periodicity == null) {
+            return null;
+        }
+        $hours = intval($this->periodicity->format('H'));
+        $minutes = intval($this->periodicity->format('i'));
+        return ($hours * 60 + $minutes) * 60000;
+    }
+
     public function setPeriodicity(DateTimeInterface $periodicity): static
     {
         $this->periodicity = $periodicity;

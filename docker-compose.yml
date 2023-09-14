@@ -30,7 +30,6 @@ services:
     image: ${IMAGES_PREFIX:-}app-caddy
     depends_on:
       - php
-    #  - php-zts
     environment:
       SERVER_NAME: ${SERVER_NAME:-localhost}, caddy:80
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}

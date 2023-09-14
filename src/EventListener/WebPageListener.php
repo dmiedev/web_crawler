@@ -5,18 +5,18 @@ namespace App\EventListener;
 use App\Entity\WebPage;
 use App\Message\ExecuteWebPageMessage;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
-use Doctrine\ORM\Event\PrePersistEventArgs;
+use Doctrine\ORM\Event\PostPersistEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use Doctrine\ORM\Events;
 use Symfony\Component\Messenger\MessageBusInterface;
 
-#[AsEntityListener(event: Events::prePersist, method: 'prePersist', entity: WebPage::class)]
+#[AsEntityListener(event: Events::postPersist, method: 'postPersist', entity: WebPage::class)]
 #[AsEntityListener(event: Events::preUpdate, method: 'preUpdate', entity: WebPage::class)]
 class WebPageListener
 {
     public function __construct(private readonly MessageBusInterface $messageBus) {}
 
-    public function prePersist(WebPage $webPage, PrePersistEventArgs $args): void
+    public function postPersist(WebPage $webPage, PostPersistEventArgs $args): void
     {
         if ($webPage->isActive()) {
             $this->startExecution($webPage);

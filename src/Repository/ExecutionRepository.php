@@ -39,6 +39,20 @@ class ExecutionRepository extends ServiceEntityRepository
         return $execution;
     }
 
+    public function finishExecution(Execution $execution, int $crawledCount): Execution
+    {
+        $execution
+            ->setStatusEnum(ExecutionStatus::Finished)
+            ->setEndTime(new DateTimeImmutable())
+            ->setCrawledCount($crawledCount);
+
+        $em = $this->getEntityManager();
+        $em->persist($execution);
+        $em->flush();
+
+        return $execution;
+    }
+
 //    /**
 //     * @return Execution[] Returns an array of Execution objects
 //     */

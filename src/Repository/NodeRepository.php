@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\Node;
+use App\Entity\WebPage;
+use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -29,6 +31,55 @@ class NodeRepository extends ServiceEntityRepository
             ->setParameter('ids', $ids)
             ->getQuery()
             ->getResult();
+    }
+
+    public function deleteAllNodes(WebPage $owner): void
+    {
+        $this->createQueryBuilder('n')
+            ->delete('App:Node', 'n')
+            ->andWhere('n.owner = :owner')
+            ->setParameter('owner', $owner)
+            ->getQuery()
+            ->execute();
+    }
+
+    public function createNewNode(
+        WebPage $owner,
+        string $url,
+        ?string $title = null,
+        ?Node $parent = null,
+        ?DateTimeImmutable $crawTime = null,
+    ): Node
+    {
+        $node = (new Node())
+            ->setOwner($owner)
+            ->setCrawlTime($crawTime)
+            ->setUrl($url)
+            ->setTitle($title);
+
+        $parent?->addLink($node);
+
+        $em = $this->getEntityManager();
+        $em->persist($node);
+        if ($parent != null) {
+            $em->persist($parent);
+        }
+
+        return $node;
+    }
+
+    public function saveChanges(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
+    public function addLink(Node $parent, Node $child): void
+    {
+        $parent->addLink($child);
+
+        $em = $this->getEntityManager();
+        $em->persist($parent);
+        $em->persist($child);
     }
 
 //    /**

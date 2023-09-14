@@ -34,7 +34,6 @@ class ExecuteWebPageMessageHandler implements LoggerAwareInterface
         }
 
         $lastExecution = $webPage->getExecutions()->last();
-
         if ($lastExecution) {
             if ($lastExecution->getStatus() == ExecutionStatus::Running || $lastExecution->getEndTime() == null) {
                 $this->logger->notice('Skipping execution as there is already a running one.', [
@@ -44,15 +43,17 @@ class ExecuteWebPageMessageHandler implements LoggerAwareInterface
             }
 
             if (!$message->overridesSchedule()) {
-                $shouldExecuteAt = $lastExecution->getEndTime()->add($webPage->getPeriodicityInterval());
-                if (new DateTimeImmutable('now') < $shouldExecuteAt) {
+                $shouldExecuteAfter = $lastExecution->getEndTime()->add($webPage->getPeriodicityInterval());
+                if (new DateTimeImmutable('now') < $shouldExecuteAfter) {
                     $this->logger->notice('Skipping an outdated execution.', ['webPageId' => $webPageId]);
                     return;
                 }
             }
         }
 
-        $this->logger->info('Starting a process for web page crawling.', ['webPageId' => $webPageId]);
+        $this->logger->info('Running the web page crawling command in a separate process.', [
+            'webPageId' => $webPageId,
+        ]);
         $process = new Process(
             ['php', 'bin/console', 'app:crawl-web-page', $message->getWebPageId()],
             $this->projectDir,
