@@ -61,16 +61,18 @@ class CrawlWebPageTask implements Task
             $content = $response->getContent();
         } catch (HttpExceptionInterface|TransportExceptionInterface) {
             $this->getLogger()->notice('Failed to access new node.', ['url' => $this->url]);
-            $lock = self::$mutex->acquire('nodes');
-            try {
+            //$lock = self::$mutex->acquire('nodes');
+            // try {
+            $this->getNodeRepository()->getEntityManager()->wrapInTransaction(function ($em) use ($webPage) {
                 $parentNode = $this->parentNodeId != null
                     ? $this->getNodeRepository()->find($this->parentNodeId)
                     : null;
                 $this->createNode($webPage, $this->url, 'Unavailable page', $parentNode, false);
-                $this->getNodeRepository()->saveChanges();
-            } finally {
-                $lock->release();
-            }
+                // $this->getNodeRepository()->saveChanges();
+            });
+//            } finally {
+//                $lock->release();
+//            }
             return [];
         }
 
@@ -98,8 +100,9 @@ class CrawlWebPageTask implements Task
         $this->getLogger()->info('Found links', ['links' => $links]);
 
         $tasks = [];
-        $lock = self::$mutex->acquire('nodes');
-        try {
+        // $lock = self::$mutex->acquire('nodes');
+        //try {
+        $this->getNodeRepository()->getEntityManager()->wrapInTransaction(function ($em) use ($webPage, $title, $links, &$tasks) {
             $this->getLogger()->info('Acquiring lock!');
             $parentNode = $this->parentNodeId != null
                 ? $this->getNodeRepository()->find($this->parentNodeId)
@@ -121,11 +124,13 @@ class CrawlWebPageTask implements Task
                     $this->getNodeRepository()->addLink($newNode, $linkNode);
                 }
             }
-            $this->getNodeRepository()->saveChanges();
-        } finally {
-            $this->getLogger()->info('Releasing lock!');
-            $lock->release();
-        }
+            // $this->getNodeRepository()->saveChanges();
+        });
+
+//        } finally {
+//            $this->getLogger()->info('Releasing lock!');
+//            $lock->release();
+//        }
 
         return $tasks;
     }

@@ -34,5 +34,6 @@ class DashboardController extends AbstractDashboardController
     {
         yield MenuItem::linkToCrud('Web Pages', 'fas fa-globe', WebPage::class);
         yield MenuItem::linkToCrud('Executions', 'fas fa-gears', Execution::class);
+        yield MenuItem::linkToRoute('Graph', 'fas fa-diagram-project', 'app_admin_graph_index');
     }
 }

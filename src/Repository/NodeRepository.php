@@ -6,6 +6,7 @@ use App\Entity\Node;
 use App\Entity\WebPage;
 use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -66,6 +67,11 @@ class NodeRepository extends ServiceEntityRepository
         }
 
         return $node;
+    }
+
+    public function getEntityManager(): EntityManagerInterface
+    {
+        return $this->_em;
     }
 
     public function saveChanges(): void
