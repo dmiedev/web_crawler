@@ -1,0 +1,15 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block head_javascript %}
+    <script src="{{ asset('app.js', ea.assets.defaultAssetPackageName) }}"></script>
+    {{ encore_entry_script_tags('app') }}
+{% endblock head_javascript %}
+
+{% block content_title %}Graph{% endblock %}
+
+{% block main %}
+    <div>
+        {{ render_chart(chart, {'data-controller': 'graph'}) }}
+    </div>
+{% endblock %}
+

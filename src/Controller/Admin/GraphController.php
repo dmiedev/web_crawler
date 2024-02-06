@@ -11,7 +11,7 @@ use Symfony\UX\Chartjs\Model\Chart;
 class GraphController extends AbstractController
 {
     #[Route('/graph', name: 'app_admin_graph_index')]
-    public function index(ChartBuilderInterface $chartBuilder): Response
+    public function graph(ChartBuilderInterface $chartBuilder): Response
     {
         $chart = $chartBuilder->createChart(Chart::TYPE_LINE);
 
@@ -28,14 +28,23 @@ class GraphController extends AbstractController
         ]);
 
         $chart->setOptions([
-            'scales' => [
-                'y' => [
-                    'suggestedMin' => 0,
-                    'suggestedMax' => 100,
+//            'scales' => [
+//                'y' => [
+//                    'suggestedMin' => 0,
+//                    'suggestedMax' => 100,
+//                ],
+//            ],
+            'plugins' => [
+                'zoom' => [
+                    'zoom' => [
+                        'wheel' => ['enabled' => true],
+                        'pinch' => ['enabled' => true],
+                        'mode' => 'xy',
+                    ],
                 ],
             ],
         ]);
 
-        return $this->render('home/index.html.twig', ['chart' => $chart]);
+        return $this->render('graph.html.twig', ['chart' => $chart]);
     }
 }
