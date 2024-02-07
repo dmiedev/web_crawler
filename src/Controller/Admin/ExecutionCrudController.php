@@ -6,6 +6,7 @@ use App\Entity\Execution;
 use App\Entity\ExecutionStatus;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
@@ -18,6 +19,11 @@ class ExecutionCrudController extends AbstractCrudController
     public static function getEntityFqcn(): string
     {
         return Execution::class;
+    }
+
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud->setDefaultSort(['startTime' => 'DESC']);
     }
 
     public function configureFields(string $pageName): iterable

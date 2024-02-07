@@ -2,83 +2,56 @@
 
 namespace App\Command;
 
-use Amp\Cache\AtomicCache;
-use Amp\Cache\LocalCache;
 use Amp\Cancellation;
-use Amp\Parallel\Worker\Task;
 use Amp\Sync\Channel;
-use Amp\Sync\LocalKeyedMutex;
-use App\Entity\Node;
-use App\Entity\WebPage;
-use App\Kernel;
-use App\Repository\NodeRepository;
-use App\Repository\WebPageRepository;
 use DateTimeImmutable;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\ErrorHandler\Debug;
-use Symfony\Component\ErrorHandler\DebugClassLoader;
-use Symfony\Component\HttpClient\HttpClient;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-class CrawlWebPageTask implements Task
+class CrawlWebPageTask extends ContainerAwareTask
 {
     public function __construct(
         public readonly string $url,
         public readonly int $webPageId,
         public readonly ?int $parentNodeId = null,
-    )
-    {
-        $this->env = $_ENV;
+    ) {
+        parent::__construct();
     }
-
-    private array $env;
 
     private const TITLE_REGEXP = '/<title[^>]*>(.*?)<\/title>/siU';
     private const LINK_REGEXP = '/<a\s[^>]*href\s*=\s*?([\"\']??)\s*([^\"\' >]*?)\s*\1[^>]*>.*<\/a>/siU';
 
-    private static ?LocalCache $localCache = null;
-    private static ?LocalKeyedMutex $mutex = null;
-
 
     public function run(Channel $channel, Cancellation $cancellation): array
     {
-        self::$localCache ??= new LocalCache();
-        self::$mutex ??= new LocalKeyedMutex();
+        parent::run($channel, $cancellation);
 
-        // TODO: mutex appears to be not always working...
-        $node = $this->getNodeRepository()->findOneBy(['url' => $this->url, 'owner' => $this->webPageId]);
+        $nodeRepository = $this->getNodeRepository();
+
+        $node = $nodeRepository->findOneBy(['url' => $this->url, 'owner' => $this->webPageId]);
          if ($node != null) {
             return [];
          }
 
         $webPage = $this->getWebPageRepository()->find($this->webPageId);
+        $parentNode = $this->parentNodeId != null ? $nodeRepository->find($this->parentNodeId) : null;
 
         try {
             $response = $this->getClient()->request('GET', $this->url);
             $content = $response->getContent();
         } catch (HttpExceptionInterface|TransportExceptionInterface) {
             $this->getLogger()->notice('Failed to access new node.', ['url' => $this->url]);
-            //$lock = self::$mutex->acquire('nodes');
-            // try {
-            $this->getNodeRepository()->getEntityManager()->wrapInTransaction(function ($em) use ($webPage) {
-                $parentNode = $this->parentNodeId != null
-                    ? $this->getNodeRepository()->find($this->parentNodeId)
-                    : null;
-                $this->createNode($webPage, $this->url, 'Unavailable page', $parentNode, false);
-                // $this->getNodeRepository()->saveChanges();
-            });
-//            } finally {
-//                $lock->release();
-//            }
+            $nodeRepository->createNewNode($webPage, $this->url, 'Unavailable page', $parentNode);
+            try {
+                $nodeRepository->saveChanges();
+            } catch (UniqueConstraintViolationException $e) {
+               // No-op
+            }
             return [];
         }
 
-        $title = preg_match(self::TITLE_REGEXP, $content, $titleMatches)
-            ? trim($titleMatches[1])
-            : "Untitled page";
+        $title = preg_match(self::TITLE_REGEXP, $content, $titleMatches) ? trim($titleMatches[1]) : "Untitled page";
 
         $links = [];
         if (preg_match_all(self::LINK_REGEXP, $content, $matches)) {
@@ -100,106 +73,41 @@ class CrawlWebPageTask implements Task
         $this->getLogger()->info('Found links', ['links' => $links]);
 
         $tasks = [];
-        // $lock = self::$mutex->acquire('nodes');
-        //try {
-        $this->getNodeRepository()->getEntityManager()->wrapInTransaction(function ($em) use ($webPage, $title, $links, &$tasks) {
-            $this->getLogger()->info('Acquiring lock!');
-            $parentNode = $this->parentNodeId != null
-                ? $this->getNodeRepository()->find($this->parentNodeId)
-                : null;
-            $this->getLogger()->info('Creating a new node', ['url' => $this->url, 'parentNodeId' => $parentNode?->getId()]);
-            $newNode = $this->createNode($webPage, $this->url, $title, $parentNode);
-            $this->getNodeRepository()->saveChanges();
+        $this->getLogger()->info('Creating a new node', ['url' => $this->url, 'parentNodeId' => $parentNode?->getId()]);
+        $newNode = $nodeRepository->createNewNode($webPage, $this->url, $title, $parentNode, new DateTimeImmutable());
+        try {
+            $nodeRepository->saveChanges();
+        } catch (UniqueConstraintViolationException $e) {
+            $this->resetEntityManager();
+            $parentNode = $this->parentNodeId != null ? $nodeRepository->find($this->parentNodeId) : null;
+            $existingNode = $nodeRepository->findOneBy(['url' => $this->url, 'owner' => $this->webPageId]);
+            $nodeRepository->addLink($parentNode, $existingNode);
+            $nodeRepository->saveChanges();
+            return [];
+        }
 
-            foreach ($links as $link) {
-                $linkNode = $this->getNodeRepository()->findOneBy(['url' => $link, 'owner' => $this->webPageId]);
-                if ($linkNode == null) {
-                    if (preg_match($webPage->getRegexp(), $link)) {
-                        $this->getLogger()->info('Creating a task', ['linkUrl' => $link, 'parentNodeId' => $newNode->getId()]);
-                        $tasks[] = new CrawlWebPageTask($link, $this->webPageId, $newNode->getId());
-                    } else {
-                        $this->createNode($webPage, $link, null, $newNode, false);
-                    }
+        foreach ($links as $link) {
+            $linkNode = $nodeRepository->findOneBy(['url' => $link, 'owner' => $this->webPageId]);
+            if ($linkNode == null) {
+                if (preg_match($webPage->getRegexp(), $link)) {
+                    $this->getLogger()->info('Creating a task', ['linkUrl' => $link, 'parentNodeId' => $newNode->getId()]);
+                    $tasks[] = new CrawlWebPageTask($link, $this->webPageId, $newNode->getId());
                 } else {
-                    $this->getNodeRepository()->addLink($newNode, $linkNode);
+                    try {
+                        $nodeRepository->createNewNode($webPage, $link, null, $newNode);
+                        $nodeRepository->saveChanges();
+                    } catch (UniqueConstraintViolationException $e) {
+                        $this->resetEntityManager();
+                        $newNode = $nodeRepository->findOneBy(['url' => $this->url, 'owner' => $this->webPageId]);
+                    }
                 }
+            } else {
+                $nodeRepository->addLink($newNode, $linkNode);
             }
-            // $this->getNodeRepository()->saveChanges();
-        });
+        }
 
-//        } finally {
-//            $this->getLogger()->info('Releasing lock!');
-//            $lock->release();
-//        }
-
+        $nodeRepository->saveChanges();
         return $tasks;
-    }
-
-    private function createNode(WebPage $webPage, string $url, ?string $title = null, ?Node $parentNode = null, bool $crawled = true): Node
-    {
-        $crawlTime = $crawled ? new DateTimeImmutable() : null;
-        return $this
-            ->getNodeRepository()
-            ->createNewNode($webPage, $url, $title, $parentNode, $crawlTime);
-    }
-
-    private function getClient(): HttpClientInterface
-    {
-        $client = self::$localCache->get('client');
-        if ($client != null) {
-            return $client;
-        }
-        $this->getLogger()->info('Creating client');
-        $options = ['headers' => ['Content-Type' => 'text/html'], 'timeout' => 15];
-        $client = HttpClient::create($options, PHP_INT_MAX, PHP_INT_MAX);
-        self::$localCache->set('client', $client);
-        return $client;
-    }
-
-    private function getLogger(): LoggerInterface
-    {
-        /** @var LoggerInterface */
-        return $this->getService('my.logger');
-    }
-
-    private function getNodeRepository(): NodeRepository
-    {
-        /** @var NodeRepository */
-        return $this->getService('my.node.repository');
-    }
-
-    private function getWebPageRepository(): WebPageRepository
-    {
-        /** @var WebPageRepository */
-        return $this->getService('my.webPage.repository');
-    }
-
-    protected function getService(string $name): ?object
-    {
-        return $this->getContainer()->get($name);
-    }
-
-    private function getContainer(): ContainerInterface
-    {
-        $container = self::$localCache->get('container');
-        if ($container != null) {
-            return $container;
-        }
-
-        if ($this->env['APP_DEBUG'] === '1') {
-            umask(0000);
-            Debug::enable();
-            DebugClassLoader::disable();
-        }
-        $_ENV = $this->env;
-
-        $kernel = new Kernel($this->env['APP_ENV'], (bool) $this->env['APP_DEBUG']);
-        $kernel->boot();
-
-        $container = $kernel->getContainer();
-        self::$localCache->set('container', $container);
-
-        return $container;
     }
 }
 

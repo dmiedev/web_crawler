@@ -31,7 +31,6 @@ class CrawlWebPageCommand extends Command implements LoggerAwareInterface
     private int $crawledCount = 0;
 
     private ?WorkerPool $workerPool = null;
-
     private ?Barrier $barrier = null;
 
     public function __construct(
@@ -90,13 +89,14 @@ class CrawlWebPageCommand extends Command implements LoggerAwareInterface
     {
         $this->workerPool->submit($task)
             ->getFuture()
-            ->map(function ($tasks) {
+            ->map(function ($tasks) use ($task) {
                 $this->crawledCount++;
                 foreach ($tasks as $task) {
                     $this->barrier->register();
                     $this->submitTask($task);
                 }
                 $this->barrier->arrive();
+                $this->logger->info('Barrier count lowered', ['barrierCount' => $this->barrier->getCount(), 'tasks' => $tasks, 'task' => $task]);
                 return $tasks;
             });
     }

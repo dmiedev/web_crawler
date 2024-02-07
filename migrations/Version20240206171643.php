@@ -10,7 +10,7 @@ use Doctrine\Migrations\AbstractMigration;
 /**
  * Auto-generated Migration: Please modify to your needs!
  */
-final class Version20230903002929 extends AbstractMigration
+final class Version20240206171643 extends AbstractMigration
 {
     public function getDescription(): string
     {
@@ -26,8 +26,9 @@ final class Version20230903002929 extends AbstractMigration
         $this->addSql('CREATE INDEX IDX_2A0D73AE4E9CD7A ON execution (web_page_id)');
         $this->addSql('COMMENT ON COLUMN execution.start_time IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('COMMENT ON COLUMN execution.end_time IS \'(DC2Type:datetime_immutable)\'');
-        $this->addSql('CREATE TABLE node (id INT NOT NULL, owner_id INT NOT NULL, title VARCHAR(255) NOT NULL, url VARCHAR(255) NOT NULL, crawl_time TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, PRIMARY KEY(id))');
+        $this->addSql('CREATE TABLE node (id INT NOT NULL, owner_id INT NOT NULL, title VARCHAR(255) DEFAULT NULL, url VARCHAR(255) NOT NULL, crawl_time TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, PRIMARY KEY(id))');
         $this->addSql('CREATE INDEX IDX_857FE8457E3C61F9 ON node (owner_id)');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_857FE845F47645AE7E3C61F9 ON node (url, owner_id)');
         $this->addSql('COMMENT ON COLUMN node.crawl_time IS \'(DC2Type:datetime_immutable)\'');
         $this->addSql('CREATE TABLE node_node (node_source INT NOT NULL, node_target INT NOT NULL, PRIMARY KEY(node_source, node_target))');
         $this->addSql('CREATE INDEX IDX_42DB65D3EB986AD6 ON node_node (node_source)');

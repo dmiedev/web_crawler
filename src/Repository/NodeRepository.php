@@ -6,6 +6,7 @@ use App\Entity\Node;
 use App\Entity\WebPage;
 use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -74,6 +75,7 @@ class NodeRepository extends ServiceEntityRepository
         return $this->_em;
     }
 
+    /** @throws UniqueConstraintViolationException */
     public function saveChanges(): void
     {
         $this->getEntityManager()->flush();

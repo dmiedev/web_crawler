@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Execution;
 use App\Entity\ExecutionStatus;
 use App\Entity\WebPage;
 use App\Message\ExecuteWebPageMessage;
@@ -63,6 +64,7 @@ class WebPageCrudController extends AbstractCrudController
             ->linkToCrudAction('executeWebPage');
 
         return parent::configureActions($actions)
+            ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, $executeAction);
     }
 
@@ -73,7 +75,7 @@ class WebPageCrudController extends AbstractCrudController
         $messageBus->dispatch(new ExecuteWebPageMessage($webPage->getId(), true));
 
         $url = $urlGenerator
-            ->setController(self::class)
+            ->setController(ExecutionCrudController::class)
             ->setAction(Crud::PAGE_INDEX)
             ->generateUrl();
         return $this->redirect($url);

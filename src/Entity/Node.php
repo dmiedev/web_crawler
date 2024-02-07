@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ApiResource(
     shortName: 'WebPageNode',
@@ -23,6 +24,9 @@ use Doctrine\ORM\Mapping as ORM;
     ],
 )]
 #[ORM\Entity(repositoryClass: NodeRepository::class)]
+#[ORM\Table(name: 'node')]
+#[ORM\UniqueConstraint(columns: ['url', 'owner_id'])]
+#[UniqueEntity(fields: ['url', 'owner'])]
 class Node
 {
     #[ORM\Id]
@@ -30,13 +34,13 @@ class Node
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $title = null;
 
     #[ORM\Column(length: 255)]
     private ?string $url = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?DateTimeImmutable $crawlTime = null;
 
     #[ORM\ManyToOne(inversedBy: 'nodes')]
