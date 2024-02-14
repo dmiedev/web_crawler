@@ -2,38 +2,64 @@
 
 namespace App\Controller\Admin;
 
+use App\Repository\NodeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\UX\Chartjs\Builder\ChartBuilderInterface;
-use Symfony\UX\Chartjs\Model\Chart;
 
 class GraphController extends AbstractController
 {
     #[Route('/graph', name: 'app_admin_graph_index')]
-    public function graph(ChartBuilderInterface $chartBuilder): Response
+    public function graph(
+        ChartBuilderInterface $chartBuilder,
+        NodeRepository $nodeRepository,
+    ): Response
     {
-        $chart = $chartBuilder->createChart(Chart::TYPE_LINE);
+        $chart = $chartBuilder->createChart('forceDirectedGraph');
+
+        $nodes = array_merge($nodeRepository->findCrawledNodes(), $nodeRepository->findUncrawledNodes());
+        $nodesCount = count($nodes);
+
+        $graphNodes = [];
+        $graphLabels = [];
+        $graphEdges = [];
+        $urlToIndex = [];
+        $graphNodeColors = [];
+
+        for ($index = 0; $index < $nodesCount; $index++) {
+            $node = $nodes[$index];
+            if (!isset($urlToIndex[$node->getUrl()])) {
+                $graphNodes[] = [];
+                $urlToIndex[$node->getUrl()] = $index;
+                $graphLabels[] = $node->getTitle() ?? $node->getUrl();
+                $graphNodeColors[] = $node->getCrawlTime() !== null ? 'steelblue' : 'grey';
+            }
+        }
+
+        for ($index = 0; $index < $nodesCount; $index++) {
+            $node = $nodes[$index];
+            foreach ($node->getLinks() as $link) {
+                $graphEdges[] = [
+                    'source' => $urlToIndex[$node->getUrl()],
+                    'target' => $urlToIndex[$link->getUrl()],
+                ];
+            }
+        }
 
         $chart->setData([
-            'labels' => ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+            'labels' => $graphLabels,
             'datasets' => [
                 [
-                    'label' => 'My First dataset',
-                    'backgroundColor' => 'rgb(255, 99, 132)',
-                    'borderColor' => 'rgb(255, 99, 132)',
-                    'data' => [0, 10, 5, 2, 20, 30, 45],
+                    'pointRadius' => 5,
+                    'data' => $graphNodes,
+                    'edges' => $graphEdges,
+                    'pointBackgroundColor' => $graphNodeColors,
                 ],
             ],
         ]);
 
         $chart->setOptions([
-//            'scales' => [
-//                'y' => [
-//                    'suggestedMin' => 0,
-//                    'suggestedMax' => 100,
-//                ],
-//            ],
             'plugins' => [
                 'zoom' => [
                     'zoom' => [
@@ -41,6 +67,12 @@ class GraphController extends AbstractController
                         'pinch' => ['enabled' => true],
                         'mode' => 'xy',
                     ],
+                ],
+                'datalabels' => ['display' => false],
+                'dragData' => [
+                    'dragX' => true,
+                    'showTooltip' => true,
+                    'round' => 1,
                 ],
             ],
         ]);

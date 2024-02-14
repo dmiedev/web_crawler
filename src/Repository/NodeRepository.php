@@ -90,6 +90,24 @@ class NodeRepository extends ServiceEntityRepository
         $em->persist($child);
     }
 
+    /** @return Node[] */
+    public function findCrawledNodes(): array
+    {
+        return $this->createQueryBuilder('n')
+            ->andWhere('n.crawlTime IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /** @return Node[] */
+    public function findUncrawledNodes(): array
+    {
+        return $this->createQueryBuilder('n')
+            ->andWhere('n.crawlTime IS NULL')
+            ->getQuery()
+            ->getResult();
+    }
+
 //    /**
 //     * @return Node[] Returns an array of Node objects
 //     */

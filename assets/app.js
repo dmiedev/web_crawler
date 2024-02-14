@@ -12,7 +12,7 @@ import './styles/app.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import dragDataPlugin from 'chartjs-plugin-dragdata';
 import dataLabelsPlugin from 'chartjs-plugin-datalabels';
-import graphPlugin from 'chartjs-chart-graph';
+import { ForceDirectedGraphController, EdgeLine } from 'chartjs-chart-graph';
 
 // register globally for all charts
 document.addEventListener('chartjs:init', function (event) {
@@ -20,5 +20,5 @@ document.addEventListener('chartjs:init', function (event) {
     Chart.register(zoomPlugin);
     Chart.register(dragDataPlugin);
     Chart.register(dataLabelsPlugin);
-    Chart.register(graphPlugin);
+    Chart.register(ForceDirectedGraphController, EdgeLine);
 });
