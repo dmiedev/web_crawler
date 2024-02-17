@@ -32,7 +32,7 @@ class WebPage
     #[ORM\Column(length: 255)]
     private ?string $label = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(type: Types::TEXT)]
     private ?string $url = null;
 
     #[ORM\Column(length: 255)]
@@ -51,6 +51,7 @@ class WebPage
     private Collection $nodes;
 
     #[ORM\OneToMany(mappedBy: 'webPage', targetEntity: Execution::class, orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $executions;
 
     public function __construct()

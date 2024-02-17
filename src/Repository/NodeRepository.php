@@ -91,19 +91,12 @@ class NodeRepository extends ServiceEntityRepository
     }
 
     /** @return Node[] */
-    public function findCrawledNodes(): array
+    public function findNodes(): array
     {
         return $this->createQueryBuilder('n')
-            ->andWhere('n.crawlTime IS NOT NULL')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /** @return Node[] */
-    public function findUncrawledNodes(): array
-    {
-        return $this->createQueryBuilder('n')
-            ->andWhere('n.crawlTime IS NULL')
+            ->addSelect('l')
+            ->leftJoin('n.links', 'l')
+            ->addOrderBy('n.crawlTime')
             ->getQuery()
             ->getResult();
     }

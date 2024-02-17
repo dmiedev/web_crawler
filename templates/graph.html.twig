@@ -1,4 +1,4 @@
-{% extends '@EasyAdmin/page/content.html.twig' %}
+{% extends '@EasyAdmin/layout.html.twig' %}
 
 {% block head_javascript %}
     <script src="{{ asset('app.js', ea.assets.defaultAssetPackageName) }}"></script>
@@ -11,5 +11,13 @@
     <div>
         {{ render_chart(chart, {'data-controller': 'graph'}) }}
     </div>
+{% endblock %}
+
+{% set mode = app.request.query.get('mode') %}
+{% set nextMode = mode != 'domain' ? 'domain' : 'web' %}
+{% set url = app.request.pathinfo ~ '?routeName=' ~ app.request.query.get('routeName') ~ "&mode=" ~ nextMode %}
+
+{% block page_actions %}
+    <a href="{{ url }}" class="btn btn-primary">Switch mode</a>
 {% endblock %}
 
