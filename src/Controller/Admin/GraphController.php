@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Repository\NodeRepository;
+use App\Repository\WebPageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,7 @@ class GraphController extends AbstractController
     public function graph(
         ChartBuilderInterface $chartBuilder,
         NodeRepository $nodeRepository,
+        WebPageRepository $webPageRepository,
         Request $request,
     ): Response
     {
@@ -44,7 +46,7 @@ class GraphController extends AbstractController
                 $nodeUrl = $host;
             }
             if (!isset($urlToIndex[$nodeUrl])) {
-                $graphNodes[] = [];
+                $graphNodes[] = ['webPageId' => $node->getOwner()->getId()];
                 $urlToIndex[$nodeUrl] = $graphNodeLength++;
                 $graphLabels[] = $mode === static::MODE_WEB ? $node->getTitle() ?? $nodeUrl : $nodeUrl;
                 $graphNodeColors[] = $node->getCrawlTime() !== null ? 'steelblue' : 'grey';
@@ -85,8 +87,13 @@ class GraphController extends AbstractController
                         ],
                     ],
                     'datalabels' => ['display' => false],
+                    'legend' => ['display' => false],
                 ],
             ]);
-        return $this->render('graph.html.twig', ['chart' => $chart]);
+
+        return $this->render('graph.html.twig', [
+            'chart' => $chart,
+            'webPages' => $webPageRepository->findAll(),
+        ]);
     }
 }

@@ -8,8 +8,19 @@
 {% block content_title %}Graph{% endblock %}
 
 {% block main %}
+    <div {{ stimulus_controller('graph') }}>
+        <ul style="display: flex; flex-wrap: wrap; flex-direction: row; margin: 0; padding: 0;">
+            {% for webPage in webPages %}
+                <li style="align-items: baseline; cursor: pointer; display: flex; flex-direction: row; margin-right: 15px;">
+                    <input id="webPage-{{ webPage.id }}" type="checkbox" checked style="margin-right: 5px"
+                            {{ stimulus_action('graph', 'updateSelection', 'change', {'webPageId': webPage.id}) }}>
+                    <label for="webPage-{{ webPage.id }}">{{ webPage.label }}</label>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
     <div>
-        {{ render_chart(chart, {'data-controller': 'graph'}) }}
+        {{ render_chart(chart, {'data-controller': 'graph', 'id': 'graph'}) }}
     </div>
 {% endblock %}
 

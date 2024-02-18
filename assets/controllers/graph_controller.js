@@ -1,23 +1,25 @@
 import { Controller } from '@hotwired/stimulus';
+import Chart from "chart.js";
 
 export default class extends Controller {
+    static chart;
+
     connect() {
-        this.element.addEventListener('chartjs:pre-connect', this._onPreConnect);
-        this.element.addEventListener('chartjs:connect', this._onConnect);
+        if (this.element.id === 'graph') {
+            this.element.addEventListener('chartjs:pre-connect', this._onPreConnect);
+            this.element.addEventListener('chartjs:connect', this._onConnect);
+        }
     }
 
     disconnect() {
-        // You should always remove listeners when the controller is disconnected to avoid side effects
-        this.element.removeEventListener('chartjs:pre-connect', this._onPreConnect);
-        this.element.removeEventListener('chartjs:connect', this._onConnect);
+        if (this.element.id === 'graph') {
+            this.element.removeEventListener('chartjs:pre-connect', this._onPreConnect);
+            this.element.removeEventListener('chartjs:connect', this._onConnect);
+        }
     }
 
     _onPreConnect(event) {
-        // The chart is not yet created
-        // You can access the config that will be passed to "new Chart()"
-        console.log('preConnect')
         console.log(event.detail.config);
-
         // For instance, you can format Y axis
         // event.detail.config.options.scales = {
         //     y: {
@@ -31,9 +33,7 @@ export default class extends Controller {
     }
 
     _onConnect(event) {
-        // The chart was just created
-        console.log('onConnect')
-        console.log(event.detail.chart); // You can access the chart instance using the event details
+        self.chart = event.detail.chart;
 
         // For instance, you can listen to additional events
         // event.detail.chart.options.onHover = (mouseEvent) => {
@@ -42,5 +42,12 @@ export default class extends Controller {
         // event.detail.chart.options.onClick = (mouseEvent) => {
         //     /* ... */
         // };
+    }
+
+    updateSelection(event) {
+        const isChecked = event.target.checked;
+        const webPageId = event.params.webpageid;
+
+        console.log(self.chart);
     }
 }
