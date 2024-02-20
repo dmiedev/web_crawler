@@ -31,6 +31,7 @@ class NodeRepository extends ServiceEntityRepository
             ->leftJoin('n.owner', 'wp')
             ->andWhere('wp.id IN (:ids)')
             ->setParameter('ids', $ids)
+            ->addOrderBy('n.crawlTime')
             ->getQuery()
             ->getResult();
     }
