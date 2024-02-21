@@ -77,7 +77,7 @@ class WebPageCrudController extends AbstractCrudController
         $messageBus->dispatch(new ExecuteWebPageMessage($webPage->getId(), true));
 
         $url = $urlGenerator
-            ->setController(ExecutionCrudController::class)
+            ->setController(WebPageCrudController::class)
             ->setAction(Crud::PAGE_INDEX)
             ->generateUrl();
         return $this->redirect($url);

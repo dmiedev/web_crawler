@@ -16,6 +16,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 #[ApiResource(
     shortName: 'WebPageNode',
     operations: [],
+    mercure: true,
     graphQlOperations: [
         new QueryCollection(
             resolver: NodeCollectionResolver::class,

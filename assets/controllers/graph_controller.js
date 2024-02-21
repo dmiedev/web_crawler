@@ -1,22 +1,31 @@
 import { Controller } from '@hotwired/stimulus';
 
-const nodeWebPageIds = new Map(); // url -> {node, webPageIds}
+/**
+ * Node URL to Set of web page IDs
+ * @type {Map<String, Set>}
+ * */
+const nodeWebPageIds = new Map();
+
+/** @type Chart */
 let chart = null;
-let mode = 'web';
+
+/** @type Set<integer> */
 const selectedWebPageIds = new Set();
 
-export default class GraphController extends Controller {
+let mode = 'web';
+
+export default class extends Controller {
     connect() {
         if (this.element.id === 'graph') {
             this.element.addEventListener('chartjs:pre-connect', this._onPreConnect);
-            this.element.addEventListener('chartjs:connect', this.onConnect);
+            this.element.addEventListener('chartjs:connect', this._onConnect);
         }
     }
 
     disconnect() {
         if (this.element.id === 'graph') {
             this.element.removeEventListener('chartjs:pre-connect', this._onPreConnect);
-            this.element.removeEventListener('chartjs:connect', this.onConnect);
+            this.element.removeEventListener('chartjs:connect', this._onConnect);
         }
     }
 
@@ -37,7 +46,7 @@ export default class GraphController extends Controller {
         };
     }
 
-    onConnect(event) {
+    _onConnect(event) {
         chart = event.detail.chart;
     }
 
@@ -65,6 +74,15 @@ export default class GraphController extends Controller {
             addSubgraph(nodes);
         }
     }
+}
+
+const url = JSON.parse(document.getElementById("mercure-url").textContent);
+const eventSource = new EventSource(url);
+eventSource.onmessage = handleMercureMessage;
+
+function handleMercureMessage(messageEvent) {
+    const data = JSON.parse(messageEvent.data);
+    console.log(data)
 }
 
 function clearGraph() {

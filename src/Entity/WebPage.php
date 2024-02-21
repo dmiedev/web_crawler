@@ -16,7 +16,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
-    mercure: true,
     graphQlOperations: [
         new QueryCollection(paginationEnabled: false)
     ],

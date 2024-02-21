@@ -7,7 +7,7 @@ use App\Repository\ExecutionRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ApiResource(graphQlOperations: [])]
+#[ApiResource(mercure: true, graphQlOperations: [])]
 #[ORM\Entity(repositoryClass: ExecutionRepository::class)]
 class Execution
 {
