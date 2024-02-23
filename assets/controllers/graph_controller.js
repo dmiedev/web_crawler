@@ -6,10 +6,22 @@ import { Controller } from '@hotwired/stimulus';
  * */
 const nodeWebPageIds = new Map();
 
+/**
+ * Node ID to URL
+ * @type {Map<number, String>}
+ */
+const nodeIdToUrl = new Map();
+
+/**
+ * URL + URL
+ * @type {Set<String>}
+ */
+const addedEdges = new Set();
+
 /** @type Chart */
 let chart = null;
 
-/** @type Set<integer> */
+/** @type Set<number> */
 const selectedWebPageIds = new Set();
 
 let mode = 'web';
@@ -30,8 +42,6 @@ export default class extends Controller {
     }
 
     _onPreConnect(event) {
-        console.log(event.detail.config);
-
         event.detail.config.options.plugins.tooltip = {
             callbacks: {
                 label: function(context) {
@@ -80,9 +90,64 @@ const url = JSON.parse(document.getElementById("mercure-url").textContent);
 const eventSource = new EventSource(url);
 eventSource.onmessage = handleMercureMessage;
 
-function handleMercureMessage(messageEvent) {
-    const data = JSON.parse(messageEvent.data);
-    console.log(data)
+function handleMercureMessage(event) {
+    const data = JSON.parse(event.data);
+    if (data['@type'] === 'Execution') {
+        if (data.endTime == null) {
+            // New execution has just started
+            const webPageId = getIdFromIri(data.webPage);
+            if (selectedWebPageIds.has(webPageId)) {
+                removeSubgraph(webPageId);
+            }
+        } else {
+            chart.update();
+        }
+    } else if (data['@type'] === 'WebPageNode') {
+        const ownerId = getIdFromIri(data.owner);
+        if (!selectedWebPageIds.has(ownerId)) {
+            return;
+        }
+        addNode(data);
+        addNodeEdges(data);
+        chart.update();
+    }
+}
+
+/**
+ * Node ID to URLs that link to this node
+ * @type {Map<number, Array>}
+ */
+const pendingNodeLinks = new Map();
+
+function addNodeEdges(node) {
+    const links = node.links;
+    const nodeUrl = convertUrl(node.url);
+    const ownerId = getNodeOwnerId(node);
+    for (const link of links) {
+        const linkId = getIdFromIri(link);
+        let linkUrl = nodeIdToUrl.get(linkId);
+        if (linkUrl === undefined) {
+            if (!pendingNodeLinks.has(linkId)) {
+                pendingNodeLinks.set(linkId, []);
+            }
+            pendingNodeLinks.get(linkId).push(nodeUrl);
+            continue;
+        }
+        const edgeUrls = nodeUrl.concat(linkUrl);
+        if (addedEdges.has(edgeUrls)) {
+            continue;
+        }
+        addedEdges.add(edgeUrls);
+        chart.data.datasets[0].edges.push({source: nodeUrl, target: linkUrl, webPageId: ownerId});
+    }
+    const pendingLinks = pendingNodeLinks.get(node.id);
+    if (pendingLinks === undefined) {
+        return;
+    }
+    for (const linkUrl of pendingLinks) {
+        chart.data.datasets[0].edges.push({source: linkUrl, target: nodeUrl, webPageId: ownerId});
+    }
+    pendingNodeLinks.delete(node.id);
 }
 
 function clearGraph() {
@@ -92,35 +157,55 @@ function clearGraph() {
     chart.data.datasets[0].pointBackgroundColor = [];
     chart.update();
     nodeWebPageIds.clear();
+    nodeIdToUrl.clear();
+    addedEdges.clear();
+    pendingNodeLinks.clear();
 }
 
 function addSubgraph(nodes) {
     for (const node of nodes) {
-        const nodeUrl = getNodeUrl(node);
-        if (!nodeWebPageIds.has(nodeUrl)) {
-            const graphNode = {title: getNodeTitle(node), url: nodeUrl};
-            const dataset = chart.data.datasets[0];
-            dataset.data.push(graphNode);
-            dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
-            chart.data.labels.push(nodeUrl);
-            nodeWebPageIds.set(nodeUrl, new Set([node.owner._id]));
-        } else {
-            const webPageIds = nodeWebPageIds.get(nodeUrl);
-            webPageIds.add(node.owner._id);
-        }
+        addNode(node);
     }
     chart.reset();
     for (const node of nodes) {
-        const nodeUrl = getNodeUrl(node);
+        const nodeUrl = convertUrl(node.url);
+        const ownerId = getNodeOwnerId(node);
         for (const link of node.links) {
-            chart.data.datasets[0].edges.push({
-                source: nodeUrl,
-                target: getNodeUrl(link),
-                webPageId: node.owner._id,
-            });
+            const linkUrl = convertUrl(link.url);
+            const edgeUrls = nodeUrl.concat(linkUrl);
+            if (addedEdges.has(edgeUrls)) {
+                continue;
+            }
+            addedEdges.add(edgeUrls);
+            chart.data.datasets[0].edges.push({source: nodeUrl, target: linkUrl, webPageId: ownerId});
         }
     }
     chart.update();
+}
+
+function addNode(node) {
+    const nodeUrl = convertUrl(node.url);
+    const nodeOwnerId = getNodeOwnerId(node);
+    nodeIdToUrl.set(node?._id ?? node.id, nodeUrl);
+    if (!nodeWebPageIds.has(nodeUrl)) {
+        const graphNode = {title: getNodeTitle(node), url: nodeUrl};
+        const dataset = chart.data.datasets[0];
+        dataset.data.push(graphNode);
+        dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
+        chart.data.labels.push(nodeUrl);
+        nodeWebPageIds.set(nodeUrl, new Set([nodeOwnerId]));
+    } else {
+        const webPageIds = nodeWebPageIds.get(nodeUrl);
+        webPageIds.add(nodeOwnerId);
+    }
+}
+
+function getIdFromIri(iri) {
+    return parseInt(iri.split('/')[3])
+}
+
+function getNodeOwnerId(node) {
+    return node?.owner?._id ?? getIdFromIri(node.owner);
 }
 
 function getNodeTitle(node) {
@@ -132,15 +217,13 @@ function getNodeTitle(node) {
         : (node.title ?? 'Uncrawled page');
 }
 
-function getNodeUrl(node) {
-    return mode === 'web' ? node.url : (new URL(node.url)).hostname;
+function convertUrl(url) {
+    return mode === 'web' ? url : (new URL(url)).hostname;
 }
 
 function removeSubgraph(webPageId) {
     const nodes = chart.data.datasets[0].data;
     const edges = chart.data.datasets[0].edges;
-
-    console.log(chart.data);
 
     const removedNodeIndices = [];
     nodes.forEach((node, index) => {
@@ -165,6 +248,7 @@ function removeSubgraph(webPageId) {
     edges.forEach((edge, index) => {
         if (edge.webPageId === webPageId) {
             removedEdgeIndices.push(index);
+            addedEdges.delete(edge.source.concat(edge.target));
         }
     });
     removedEdgeIndices.toReversed().forEach((index) => {
@@ -175,26 +259,12 @@ function removeSubgraph(webPageId) {
     chart.reset();
 }
 
-// async function fetchWebPageIds() {
-//     const response = await fetch(window.location.origin + '/api/graphql', {
-//         method: 'POST',
-//         headers: {"Content-Type": "application/json", "Accept": "application/json"},
-//         body: JSON.stringify({ query: `{ webPages { _id } }` }),
-//     });
-//     if (!response.ok) {
-//         self.alert('Failed to fetch data!');
-//         return null;
-//     }
-//     const json = await response.json();
-//     return json.data.webPages;
-// }
-
 async function fetchWebPageNodes(webPageIds) {
     const response = await fetch(window.location.origin + '/api/graphql', {
         method: 'POST',
         headers: {"Content-Type": "application/json", "Accept": "application/json"},
         body: JSON.stringify({
-            query: `{ webPageNodes(webPages: [${webPageIds}]) { title, url, crawlTime, links { url }, owner { _id } } }`,
+            query: `{ webPageNodes(webPages: [${webPageIds}]) { _id, title, url, crawlTime, links { url }, owner { _id } } }`,
         }),
     });
     if (!response.ok) {

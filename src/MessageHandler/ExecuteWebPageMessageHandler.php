@@ -35,7 +35,7 @@ class ExecuteWebPageMessageHandler implements LoggerAwareInterface
 
         $lastExecution = $webPage->getExecutions()->last();
         if ($lastExecution) {
-            if ($lastExecution->getStatus() == ExecutionStatus::Running) {
+            if ($lastExecution->getStatus() == ExecutionStatus::Running || $lastExecution->getEndTime() == null) {
                 $this->logger->notice('Skipping execution as there is already a running one.', [
                     'webPageId' => $webPageId,
                 ]);
