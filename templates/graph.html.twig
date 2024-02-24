@@ -8,6 +8,16 @@
 
 {% block content_title %}Graph{% endblock %}
 
+{% block page_actions %}
+    <div {{ stimulus_controller('graph') }}>
+        <span class="form-switch" style="margin-right: 15px;">
+            <input type="checkbox" id="live-mode" class="form-check-input" {{ stimulus_action('graph', 'switchUpdateMode', 'change') }}>
+            <label class="checkbox-switch form-check-label" for="live-mode">Live mode</label>
+        </span>
+        <a class="btn btn-primary" {{ stimulus_action('graph', 'switchViewMode', 'click') }}>Switch mode</a>
+    </div>
+{% endblock %}
+
 {% block main %}
     <div {{ stimulus_controller('graph') }}>
         <ul style="display: flex; flex-wrap: wrap; flex-direction: row; margin: 0; padding: 0;">
@@ -22,12 +32,6 @@
     </div>
     <div>
         {{ render_chart(chart, {'data-controller': 'graph', 'id': 'graph'}) }}
-    </div>
-{% endblock %}
-
-{% block page_actions %}
-    <div {{ stimulus_controller('graph') }}>
-        <a class="btn btn-primary" {{ stimulus_action('graph', 'switchMode', 'click') }}>Switch mode</a>
     </div>
 {% endblock %}
 

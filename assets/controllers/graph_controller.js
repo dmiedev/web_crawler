@@ -24,7 +24,10 @@ let chart = null;
 /** @type Set<number> */
 const selectedWebPageIds = new Set();
 
-let mode = 'web';
+/** @type {EventSource} */
+let eventSource = null;
+
+let viewMode = 'web';
 
 export default class extends Controller {
     connect() {
@@ -76,19 +79,47 @@ export default class extends Controller {
         }
     }
 
-    async switchMode(event) {
-        mode = mode === 'domain' ? 'web' : 'domain';
-        clearGraph();
-        if (selectedWebPageIds.size > 0) {
-            const nodes = await fetchWebPageNodes(Array.from(selectedWebPageIds.values()));
-            addSubgraph(nodes);
+    async switchViewMode(event) {
+        const liveModeEnabled = eventSource !== null;
+        if (liveModeEnabled) {
+            unsubscribeFromMercure();
+        }
+        viewMode = viewMode === 'domain' ? 'web' : 'domain';
+        await reloadGraph();
+        if (liveModeEnabled) {
+            subscribeToMercure();
+        }
+    }
+
+    async switchUpdateMode(event) {
+        const liveModeEnabled = event.target.checked;
+        if (liveModeEnabled) {
+            await reloadGraph();
+            subscribeToMercure();
+        } else {
+            unsubscribeFromMercure();
         }
     }
 }
 
-const url = JSON.parse(document.getElementById("mercure-url").textContent);
-const eventSource = new EventSource(url);
-eventSource.onmessage = handleMercureMessage;
+function subscribeToMercure() {
+    const url = JSON.parse(document.getElementById("mercure-url").textContent);
+    eventSource = new EventSource(url);
+    eventSource.onmessage = handleMercureMessage;
+}
+
+function unsubscribeFromMercure() {
+    eventSource?.close();
+    eventSource = null;
+}
+
+async function reloadGraph() {
+    clearGraph();
+    if (selectedWebPageIds.size > 0) {
+        const nodes = await fetchWebPageNodes(Array.from(selectedWebPageIds.values()));
+        addSubgraph(nodes);
+    }
+}
 
 function handleMercureMessage(event) {
     const data = JSON.parse(event.data);
@@ -209,7 +240,7 @@ function getNodeOwnerId(node) {
 }
 
 function getNodeTitle(node) {
-    if (mode === 'domain') {
+    if (viewMode === 'domain') {
         return null;
     }
     return node.crawlTime != null && node.title == null
@@ -218,7 +249,7 @@ function getNodeTitle(node) {
 }
 
 function convertUrl(url) {
-    return mode === 'web' ? url : (new URL(url)).hostname;
+    return viewMode === 'web' ? url : (new URL(url)).hostname;
 }
 
 function removeSubgraph(webPageId) {
