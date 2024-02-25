@@ -49,4 +49,7 @@ class GraphController extends AbstractController
             'webPages' => $webPageRepository->findAll(),
         ]);
     }
+
+//    #[Route('/graph', name: 'app_admin_graph_index')]
+//    public function executeWebPage()
 }

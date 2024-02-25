@@ -22,3 +22,5 @@ document.addEventListener('chartjs:init', function (event) {
     Chart.register(dataLabelsPlugin);
     Chart.register(ForceDirectedGraphController, EdgeLine);
 });
+
+require('bootstrap');

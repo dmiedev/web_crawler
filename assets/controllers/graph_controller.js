@@ -1,5 +1,8 @@
 import { Controller } from '@hotwired/stimulus';
 
+/** @type {Array<Object>} */
+let webPages = null;
+
 /**
  * Node URL to Set of web page IDs
  * @type {Map<String, Set>}
@@ -44,7 +47,8 @@ export default class extends Controller {
         }
     }
 
-    _onPreConnect(event) {
+    async _onPreConnect(event) {
+        webPages = await fetchWebPages();
         event.detail.config.options.plugins.tooltip = {
             callbacks: {
                 label: function(context) {
@@ -55,6 +59,13 @@ export default class extends Controller {
                     }
                     return [url];
                 },
+            },
+        };
+        event.detail.config.options.onClick = function(event, elements) {
+            if (elements.length === 1) {
+                showNodeDetail(elements[0].index);
+            } else {
+                hideNodeDetail();
             }
         };
     }
@@ -102,6 +113,46 @@ export default class extends Controller {
     }
 }
 
+
+function showNodeDetail(nodeIndex) {
+    const node = chart.data.datasets[0].data[nodeIndex];
+
+    document.getElementById('nodeDetailLabel').innerText = node.title;
+    document.getElementById('nodeDetailUrl').innerText = node.url;
+    document.getElementById('nodeDetailCrawlTime').innerText = node.crawlTime?.toLocaleString('en-US') ?? '--';
+    document.getElementById('nodeDetail').classList.add('show');
+
+    const list = document.getElementById('nodeDetailWebPagesList');
+    list.innerHTML = '';
+
+    if (node.crawlTime === null) {
+        list.innerText = '--';
+        return;
+    }
+
+    const webPageIds = nodeWebPageIds.get(node.url);
+    const nodeWebPages = webPages.filter((webPage) => webPageIds.has(webPage._id));
+    for (const webPage of nodeWebPages) {
+        const listItem = document.createElement('li');
+        listItem.classList.add('list-group-item');
+        listItem.setAttribute('style', 'justify-content: space-between; display: flex;');
+        listItem.innerText = webPage.label;
+
+        const button = document.createElement('button');
+        button.setAttribute('type', 'button');
+        button.classList.add('btn', 'btn-primary');
+        button.innerText = 'Execute';
+
+        listItem.appendChild(button);
+        list.appendChild(listItem);
+    }
+}
+
+function hideNodeDetail() {
+    document.getElementById('nodeDetail').classList.remove('show');
+}
+
+
 function subscribeToMercure() {
     const url = JSON.parse(document.getElementById("mercure-url").textContent);
     eventSource = new EventSource(url);
@@ -146,7 +197,7 @@ function handleMercureMessage(event) {
 
 /**
  * Node ID to URLs that link to this node
- * @type {Map<number, Array>}
+ * @type {Map<number, Array<String>>}
  */
 const pendingNodeLinks = new Map();
 
@@ -180,6 +231,7 @@ function addNodeEdges(node) {
     }
     pendingNodeLinks.delete(node.id);
 }
+
 
 function clearGraph() {
     chart.data.labels = [];
@@ -219,7 +271,11 @@ function addNode(node) {
     const nodeOwnerId = getNodeOwnerId(node);
     nodeIdToUrl.set(node?._id ?? node.id, nodeUrl);
     if (!nodeWebPageIds.has(nodeUrl)) {
-        const graphNode = {title: getNodeTitle(node), url: nodeUrl};
+        const graphNode = {
+            title: getNodeTitle(node),
+            url: nodeUrl,
+            crawlTime: node.crawlTime != null ? new Date(node.crawlTime) : null,
+        };
         const dataset = chart.data.datasets[0];
         dataset.data.push(graphNode);
         dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
@@ -231,13 +287,9 @@ function addNode(node) {
     }
 }
 
-function getIdFromIri(iri) {
-    return parseInt(iri.split('/')[3])
-}
+const getIdFromIri = (iri) => parseInt(iri.split('/')[3]);
 
-function getNodeOwnerId(node) {
-    return node?.owner?._id ?? getIdFromIri(node.owner);
-}
+const getNodeOwnerId = (node) => node?.owner?._id ?? getIdFromIri(node.owner);
 
 function getNodeTitle(node) {
     if (viewMode === 'domain') {
@@ -248,9 +300,7 @@ function getNodeTitle(node) {
         : (node.title ?? 'Uncrawled page');
 }
 
-function convertUrl(url) {
-    return viewMode === 'web' ? url : (new URL(url)).hostname;
-}
+const convertUrl = (url) => viewMode === 'web' ? url : (new URL(url)).hostname;
 
 function removeSubgraph(webPageId) {
     const nodes = chart.data.datasets[0].data;
@@ -290,6 +340,7 @@ function removeSubgraph(webPageId) {
     chart.reset();
 }
 
+
 async function fetchWebPageNodes(webPageIds) {
     const response = await fetch(window.location.origin + '/api/graphql', {
         method: 'POST',
@@ -304,4 +355,22 @@ async function fetchWebPageNodes(webPageIds) {
     }
     const json = await response.json();
     return json.data.webPageNodes;
+}
+
+async function fetchWebPages() {
+    const response = await fetch(window.location.origin + '/api/graphql', {
+        method: 'POST',
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        body: JSON.stringify({ query: `{ webPages { _id, label } }` }),
+    });
+    if (!response.ok) {
+        self.alert('Failed to fetch data!');
+        return null;
+    }
+    const json = await response.json();
+    return json.data.webPages;
+}
+
+async function executeWebPage(id) {
+
 }
