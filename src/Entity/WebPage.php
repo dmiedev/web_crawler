@@ -3,7 +3,13 @@
 namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\GraphQl\QueryCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
 use App\Repository\WebPageRepository;
 use DateInterval;
 use DateTimeImmutable;
@@ -12,10 +18,44 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 #[ApiResource(
+    operations: [
+        new GetCollection(),
+        new Get(),
+        new Post(),
+        new Post(
+            routeName: 'web_page_post_execute',
+            openapiContext: [
+                'summary' => 'Executes a WebPage resource.',
+                'parameters' => [
+                    [
+                        'in' => 'path',
+                        'name' => 'id',
+                        'required' => true,
+                        'schema' => ['type' => 'string'],
+                        'description' => 'WebPage identifier',
+                    ],
+                ],
+                'requestBody' => ['required' => false, 'content' => []],
+                'responses' => [
+                    '200' => ['description' => 'WebPage executed', 'content' => null],
+                    '404' => ['description' => 'Resource not found'],
+                ],
+            ],
+            name: 'execute',
+        ),
+        new Put(),
+        new Delete(),
+        new Patch(),
+    ],
+    denormalizationContext: [
+        'groups' => ['web_page:write'],
+        'swagger_definition_name' => 'Write',
+    ],
     graphQlOperations: [
         new QueryCollection(paginationEnabled: false)
     ],
@@ -29,21 +69,27 @@ class WebPage
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['web_page:write'])]
     private ?string $label = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Groups(['web_page:write'])]
     private ?string $url = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['web_page:write'])]
     private ?string $regexp = null;
 
     #[ORM\Column]
+    #[Groups(['web_page:write'])]
     private ?bool $active = null;
 
     #[ORM\Column(type: Types::SIMPLE_ARRAY)]
+    #[Groups(['web_page:write'])]
     private array $tags = [];
 
     #[ORM\Column(type: Types::TIME_MUTABLE)]
+    #[Groups(['web_page:write'])]
     private ?DateTimeInterface $periodicity = null;
 
     #[ORM\OneToMany(mappedBy: 'owner', targetEntity: Node::class, orphanRemoval: true)]

@@ -19,6 +19,28 @@
 {% endblock %}
 
 {% block main %}
+    <div class="offcanvas offcanvas-end" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="node-detail" aria-labelledby="nodeDetailLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="node-detail-label">Colored with scrolling</h5>
+{#            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>#}
+        </div>
+        <div class="offcanvas-body">
+            <dl class="row">
+                <dt class="col-sm-4">URL</dt>
+                <dd id="node-detail-url" class="col-sm-8"></dd>
+
+                <dt class="col-sm-4">Crawl time</dt>
+                <dd id="node-detail-crawl-time" class="col-sm-8"></dd>
+
+                <dt class="col-sm-4">Web pages</dt>
+                <dd id="node-detail-web-pages" class="col-sm-8">
+                    <ul id="node-detail-web-pages-list" class="list-group list-group-flush">
+                    </ul>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
     <div {{ stimulus_controller('graph') }}>
         <ul style="display: flex; flex-wrap: wrap; flex-direction: row; margin: 0; padding: 0;">
             {% for webPage in webPages %}
@@ -32,25 +54,5 @@
     </div>
     {{ render_chart(chart, {'data-controller': 'graph', 'id': 'graph'}) }}
 
-    <div class="offcanvas offcanvas-end" data-bs-scroll="true" data-bs-backdrop="false" tabindex="-1" id="nodeDetail" aria-labelledby="nodeDetailLabel">
-        <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="nodeDetailLabel">Colored with scrolling</h5>
-        </div>
-        <div class="offcanvas-body">
-            <dl class="row">
-                <dt class="col-sm-4">URL</dt>
-                <dd id="nodeDetailUrl" class="col-sm-8"></dd>
-
-                <dt class="col-sm-4">Crawl time</dt>
-                <dd id="nodeDetailCrawlTime" class="col-sm-8"></dd>
-
-                <dt class="col-sm-4">Web pages</dt>
-                <dd id="nodeDetailWebPages" class="col-sm-8">
-                    <ul id="nodeDetailWebPagesList" class="list-group list-group-flush">
-                    </ul>
-                </dd>
-            </dl>
-        </div>
-    </div>
 {% endblock %}
 

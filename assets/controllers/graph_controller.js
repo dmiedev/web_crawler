@@ -117,12 +117,12 @@ export default class extends Controller {
 function showNodeDetail(nodeIndex) {
     const node = chart.data.datasets[0].data[nodeIndex];
 
-    document.getElementById('nodeDetailLabel').innerText = node.title;
-    document.getElementById('nodeDetailUrl').innerText = node.url;
-    document.getElementById('nodeDetailCrawlTime').innerText = node.crawlTime?.toLocaleString('en-US') ?? '--';
-    document.getElementById('nodeDetail').classList.add('show');
+    document.getElementById('node-detail-label').innerText = node.title;
+    document.getElementById('node-detail-url').innerText = node.url;
+    document.getElementById('node-detail-crawl-time').innerText = node.crawlTime?.toLocaleString('en-US') ?? '--';
+    document.getElementById('node-detail').classList.add('show');
 
-    const list = document.getElementById('nodeDetailWebPagesList');
+    const list = document.getElementById('node-detail-web-pages-list');
     list.innerHTML = '';
 
     if (node.crawlTime === null) {
@@ -135,13 +135,14 @@ function showNodeDetail(nodeIndex) {
     for (const webPage of nodeWebPages) {
         const listItem = document.createElement('li');
         listItem.classList.add('list-group-item');
-        listItem.setAttribute('style', 'justify-content: space-between; display: flex;');
+        listItem.setAttribute('style', 'justify-content: space-between; display: flex; align-items: baseline;');
         listItem.innerText = webPage.label;
 
         const button = document.createElement('button');
         button.setAttribute('type', 'button');
         button.classList.add('btn', 'btn-primary');
         button.innerText = 'Execute';
+        button.onclick = () => executeWebPage(webPage._id);
 
         listItem.appendChild(button);
         list.appendChild(listItem);
@@ -149,7 +150,7 @@ function showNodeDetail(nodeIndex) {
 }
 
 function hideNodeDetail() {
-    document.getElementById('nodeDetail').classList.remove('show');
+    document.getElementById('node-detail').classList.remove('show');
 }
 
 
@@ -372,5 +373,13 @@ async function fetchWebPages() {
 }
 
 async function executeWebPage(id) {
-
+    const response = await fetch(window.location.origin + `/api/web_pages/${id}/execute`, {
+        method: 'POST',
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+    });
+    if (!response.ok) {
+        self.alert('Failed to execute web page!');
+    } else {
+        self.alert('Executed web page!');
+    }
 }
