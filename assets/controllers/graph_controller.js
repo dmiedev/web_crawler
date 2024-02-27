@@ -4,7 +4,7 @@ import {Controller} from '@hotwired/stimulus';
 let webPages = null;
 
 /**
- * Node URL to Set of IDs of web pages that crawled the node
+ * Node URL to Set of IDs of web pages that have this node
  * @type {Map<String, Set>}
  * */
 const nodeWebPageIds = new Map();
@@ -301,25 +301,30 @@ function addSubgraph(nodes) {
 }
 
 function addNode(node) {
-    const nodeUrl = convertUrl(node.url);
-    const nodeOwnerId = getNodeOwnerId(node);
-    nodeIdToUrl.set(node?._id ?? node.id, nodeUrl);
-    if (!nodeWebPageIds.has(nodeUrl)) {
-        const graphNode = {
-            title: getNodeTitle(node),
-            url: nodeUrl,
-            crawlTime: node.crawlTime != null ? new Date(node.crawlTime) : null,
-        };
-        const dataset = chart.data.datasets[0];
+    const url = convertUrl(node.url);
+    const title = getNodeTitle(node);
+    const crawlTime = node.crawlTime != null ? new Date(node.crawlTime) : null;
+    const ownerId = getNodeOwnerId(node);
+    nodeIdToUrl.set(node?._id ?? node.id, url);
+    const dataset = chart.data.datasets[0];
+    if (!nodeWebPageIds.has(url)) {
+        // Create a new node
+        const graphNode = {title: title, url: url, crawlTime: crawlTime};
         dataset.data.push(graphNode);
         dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
-        chart.data.labels.push(nodeUrl);
-        nodeWebPageIds.set(nodeUrl, new Set([nodeOwnerId]));
+        chart.data.labels.push(url);
+        nodeWebPageIds.set(url, new Set([ownerId]));
     } else {
-        const webPageIds = nodeWebPageIds.get(nodeUrl);
-        webPageIds.add(nodeOwnerId);
-        graphNode.title = getNodeTitle(node);
-        graphNode.crawlTime = node.crawlTime != null ? new Date(node.crawlTime) : null;
+        const webPageIds = nodeWebPageIds.get(url);
+        webPageIds.add(ownerId);
+        if (node.crawlTime === null) {
+            return;
+        }
+        const index = dataset.data.findIndex((node) => node.url === url);
+        const graphNode = dataset.data[index];
+        graphNode.title = title;
+        graphNode.crawlTime = crawlTime;
+        dataset.pointBackgroundColor[index] = 'steelblue';
     }
 }
 
