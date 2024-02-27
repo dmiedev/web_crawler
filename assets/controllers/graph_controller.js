@@ -1,10 +1,10 @@
-import { Controller } from '@hotwired/stimulus';
+import {Controller} from '@hotwired/stimulus';
 
 /** @type {Array<Object>} */
 let webPages = null;
 
 /**
- * Node URL to Set of web page IDs
+ * Node URL to Set of IDs of web pages that crawled the node
  * @type {Map<String, Set>}
  * */
 const nodeWebPageIds = new Map();
@@ -16,7 +16,7 @@ const nodeWebPageIds = new Map();
 const nodeIdToUrl = new Map();
 
 /**
- * URL + URL
+ * Set of graph edges (source URL + target URL)
  * @type {Set<String>}
  */
 const addedEdges = new Set();
@@ -115,35 +115,33 @@ export default class extends Controller {
 
 
 function showNodeDetail(nodeIndex) {
+    // TODO: onclick -> Stimulus (?)
     const node = chart.data.datasets[0].data[nodeIndex];
-
     document.getElementById('node-detail-label').innerText = node.title;
     document.getElementById('node-detail-url').innerText = node.url;
-    document.getElementById('node-detail-crawl-time').innerText = node.crawlTime?.toLocaleString('en-US') ?? '--';
+    document.getElementById('node-detail-crawl-time').innerText = node.crawlTime?.toLocaleString('cs-CZ') ?? '--';
     document.getElementById('node-detail').classList.add('show');
-
     const list = document.getElementById('node-detail-web-pages-list');
-    list.innerHTML = '';
-
+    const newButton = document.getElementById('new-web-page-button');
     if (node.crawlTime === null) {
         list.innerText = '--';
+        newButton.style.display = 'block';
+        newButton.onclick = () => createWebPage(node.url);
         return;
     }
-
+    list.innerHTML = '';
+    newButton.style.display = 'none';
     const webPageIds = nodeWebPageIds.get(node.url);
     const nodeWebPages = webPages.filter((webPage) => webPageIds.has(webPage._id));
     for (const webPage of nodeWebPages) {
         const listItem = document.createElement('li');
         listItem.classList.add('list-group-item');
-        listItem.setAttribute('style', 'justify-content: space-between; display: flex; align-items: baseline;');
         listItem.innerText = webPage.label;
-
         const button = document.createElement('button');
         button.setAttribute('type', 'button');
         button.classList.add('btn', 'btn-primary');
         button.innerText = 'Execute';
         button.onclick = () => executeWebPage(webPage._id);
-
         listItem.appendChild(button);
         list.appendChild(listItem);
     }
@@ -151,6 +149,41 @@ function showNodeDetail(nodeIndex) {
 
 function hideNodeDetail() {
     document.getElementById('node-detail').classList.remove('show');
+}
+
+async function createWebPage(url) {
+    if (viewMode === 'domain') {
+        url = 'https://' + url;
+    }
+    const webPage = await postWebPage(url);
+    if (webPage == null) {
+        return;
+    }
+    hideNodeDetail();
+    selectedWebPageIds.add(webPage.id);
+    if (eventSource === null) {
+        await reloadGraph();
+        subscribeToMercure();
+        document.getElementById('live-mode').checked = true;
+    }
+    createWebPageListItem(webPage);
+    webPages.push({_id: webPage.id, label: webPage.label});
+}
+
+function createWebPageListItem(webPage) {
+    const listItem = document.createElement('li');
+    const checkbox = document.createElement('input');
+    checkbox.setAttribute('type', 'checkbox');
+    checkbox.setAttribute('id', `web-page-${webPage.id}`)
+    checkbox.setAttribute('data-action', 'change->graph#updateSelection');
+    checkbox.setAttribute('data-graph-webpageid-param', webPage.id);
+    checkbox.checked = true;
+    const label = document.createElement('label');
+    label.setAttribute('for', `web-page-${webPage.id}`);
+    label.innerText = webPage.label;
+    listItem.appendChild(checkbox);
+    listItem.appendChild(label);
+    document.getElementById('web-page-list').appendChild(listItem);
 }
 
 
@@ -216,7 +249,7 @@ function addNodeEdges(node) {
             pendingNodeLinks.get(linkId).push(nodeUrl);
             continue;
         }
-        const edgeUrls = nodeUrl.concat(linkUrl);
+        const edgeUrls = nodeUrl + linkUrl;
         if (addedEdges.has(edgeUrls)) {
             continue;
         }
@@ -256,7 +289,7 @@ function addSubgraph(nodes) {
         const ownerId = getNodeOwnerId(node);
         for (const link of node.links) {
             const linkUrl = convertUrl(link.url);
-            const edgeUrls = nodeUrl.concat(linkUrl);
+            const edgeUrls = nodeUrl + linkUrl;
             if (addedEdges.has(edgeUrls)) {
                 continue;
             }
@@ -285,6 +318,8 @@ function addNode(node) {
     } else {
         const webPageIds = nodeWebPageIds.get(nodeUrl);
         webPageIds.add(nodeOwnerId);
+        graphNode.title = getNodeTitle(node);
+        graphNode.crawlTime = node.crawlTime != null ? new Date(node.crawlTime) : null;
     }
 }
 
@@ -330,7 +365,7 @@ function removeSubgraph(webPageId) {
     edges.forEach((edge, index) => {
         if (edge.webPageId === webPageId) {
             removedEdgeIndices.push(index);
-            addedEdges.delete(edge.source.concat(edge.target));
+            addedEdges.delete(edge.source + edge.target);
         }
     });
     removedEdgeIndices.toReversed().forEach((index) => {
@@ -382,4 +417,26 @@ async function executeWebPage(id) {
     } else {
         self.alert('Executed web page!');
     }
+}
+
+async function postWebPage(url) {
+    const parsedUrl = new URL(url);
+    const body = {
+        label: parsedUrl.hostname,
+        url: url,
+        regexp: '/' + parsedUrl.origin.replaceAll('/', '\\/').replaceAll('.', '\\.') +  '\\/.*/',
+        active: true,
+        tags: ['graph'],
+        periodicity: "2024-12-12T12:00:00",
+    };
+    const response = await fetch(window.location.origin + '/api/web_pages', {
+        method: 'POST',
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+        self.alert('Failed to submit data!');
+        return null;
+    }
+    return await response.json();
 }

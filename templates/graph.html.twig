@@ -3,6 +3,7 @@
 {% block head_javascript %}
     <script src="{{ asset('app.js', ea.assets.defaultAssetPackageName) }}"></script>
     {{ encore_entry_script_tags('app') }}
+    {{ encore_entry_link_tags('app') }}
     <script type="application/json" id="mercure-url">{{ mercure(['http://localhost/api/web_page_nodes/{id}', 'http://localhost/api/executions/{id}'])|json_encode(constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_HEX_TAG'))|raw }}</script>
 {% endblock head_javascript %}
 
@@ -10,7 +11,7 @@
 
 {% block page_actions %}
     <div {{ stimulus_controller('graph') }}>
-        <span class="form-switch" style="margin-right: 15px;">
+        <span id="live-mode-switch" class="form-switch">
             <input type="checkbox" id="live-mode" class="form-check-input" {{ stimulus_action('graph', 'switchUpdateMode', 'change') }}>
             <label class="checkbox-switch form-check-label" for="live-mode">Live mode</label>
         </span>
@@ -24,30 +25,30 @@
             <h5 class="offcanvas-title" id="node-detail-label">Colored with scrolling</h5>
 {#            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>#}
         </div>
-        <div class="offcanvas-body">
+        <div id="node-detail-body" class="offcanvas-body">
             <dl class="row">
                 <dt class="col-sm-4">URL</dt>
                 <dd id="node-detail-url" class="col-sm-8"></dd>
-
                 <dt class="col-sm-4">Crawl time</dt>
                 <dd id="node-detail-crawl-time" class="col-sm-8"></dd>
-
                 <dt class="col-sm-4">Web pages</dt>
                 <dd id="node-detail-web-pages" class="col-sm-8">
                     <ul id="node-detail-web-pages-list" class="list-group list-group-flush">
                     </ul>
                 </dd>
             </dl>
+            <button id="new-web-page-button" type="button" class="btn btn-primary">
+                Create new web page
+            </button>
         </div>
     </div>
 
     <div {{ stimulus_controller('graph') }}>
-        <ul style="display: flex; flex-wrap: wrap; flex-direction: row; margin: 0; padding: 0;">
+        <ul id="web-page-list">
             {% for webPage in webPages %}
-                <li style="align-items: baseline; cursor: pointer; display: flex; flex-direction: row; margin-right: 15px;">
-                    <input id="webPage-{{ webPage.id }}" type="checkbox" style="margin-right: 5px"
-                            {{ stimulus_action('graph', 'updateSelection', 'change', {'webPageId': webPage.id}) }}>
-                    <label for="webPage-{{ webPage.id }}">{{ webPage.label }}</label>
+                <li>
+                    <input id="web-page-{{ webPage.id }}" type="checkbox" {{ stimulus_action('graph', 'updateSelection', 'change', {'webPageId': webPage.id}) }}>
+                    <label for="web-page-{{ webPage.id }}">{{ webPage.label }}</label>
                 </li>
             {% endfor %}
         </ul>

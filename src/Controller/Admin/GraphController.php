@@ -56,9 +56,7 @@ class GraphController extends AbstractController
     #[Route(
         path: '/api/web_pages/{id}/execute',
         name: 'web_page_post_execute',
-        defaults: [
-            '_api_operation_name' => '_api_/web_pages/{id}/execute_post',
-        ],
+        defaults: ['_api_operation_name' => '_api_/web_pages/{id}/execute_post'],
         methods: ['POST'],
     )]
     public function executeWebPage(WebPage $webPage, MessageBusInterface $messageBus): Response

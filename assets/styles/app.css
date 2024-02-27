@@ -1,3 +1,29 @@
-body {
-    background-color: lightgray;
+#live-mode-switch {
+    margin-right: 15px;
+}
+
+#web-page-list {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    margin: 0;
+    padding: 0;
+}
+
+#web-page-list li {
+    align-items: baseline;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    margin-right: 15px;
+}
+
+#web-page-list li input {
+    margin-right: 5px;
+}
+
+#node-detail-web-pages-list li {
+    justify-content: space-between;
+    display: flex;
+    align-items: baseline;
 }
