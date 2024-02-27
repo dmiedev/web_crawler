@@ -1,13 +1,20 @@
 import {Controller} from '@hotwired/stimulus';
+import { Heap } from 'heap-js';
 
-/** @type {Array<Object>} */
+/** @type Array<Object> */
 let webPages = null;
 
 /**
  * Node URL to Set of IDs of web pages that have this node
- * @type {Map<String, Set>}
+ * @type {Map<String, Set<number>>}
  * */
 const nodeWebPageIds = new Map();
+
+/**
+ * URL to crawled node objects sorted by crawlTime
+ * @type {Map<String, Heap<Object>>}
+ */
+const urlToNodeHeap = new Map();
 
 /**
  * Node ID to URL
@@ -16,10 +23,11 @@ const nodeWebPageIds = new Map();
 const nodeIdToUrl = new Map();
 
 /**
- * Set of graph edges (source URL + target URL)
- * @type {Set<String>}
+ * Graph edge (source URL + target URL) to
+ * Set of IDs of web pages that have this edge
+ * @type {Map<String, Set<number>>}
  */
-const addedEdges = new Set();
+const edgeWebPageIds = new Map();
 
 /** @type Chart */
 let chart = null;
@@ -27,7 +35,10 @@ let chart = null;
 /** @type Set<number> */
 const selectedWebPageIds = new Set();
 
-/** @type {EventSource} */
+/** @type String */
+let selectedNodeUrl = null;
+
+/** @type EventSource */
 let eventSource = null;
 
 let viewMode = 'web';
@@ -88,6 +99,7 @@ export default class extends Controller {
             selectedWebPageIds.delete(webPageId);
             removeSubgraph(webPageId);
         }
+
     }
 
     async switchViewMode(event) {
@@ -117,6 +129,7 @@ export default class extends Controller {
 function showNodeDetail(nodeIndex) {
     // TODO: onclick -> Stimulus (?)
     const node = chart.data.datasets[0].data[nodeIndex];
+    selectedNodeUrl = node.url;
     document.getElementById('node-detail-label').innerText = node.title;
     document.getElementById('node-detail-url').innerText = node.url;
     document.getElementById('node-detail-crawl-time').innerText = node.crawlTime?.toLocaleString('cs-CZ') ?? '--';
@@ -131,7 +144,7 @@ function showNodeDetail(nodeIndex) {
     }
     list.innerHTML = '';
     newButton.style.display = 'none';
-    const webPageIds = nodeWebPageIds.get(node.url);
+    const webPageIds = new Set(urlToNodeHeap.get(node.url).heapArray.map((n) => n.ownerId));
     const nodeWebPages = webPages.filter((webPage) => webPageIds.has(webPage._id));
     for (const webPage of nodeWebPages) {
         const listItem = document.createElement('li');
@@ -148,6 +161,7 @@ function showNodeDetail(nodeIndex) {
 }
 
 function hideNodeDetail() {
+    selectedNodeUrl = null;
     document.getElementById('node-detail').classList.remove('show');
 }
 
@@ -249,23 +263,25 @@ function addNodeEdges(node) {
             pendingNodeLinks.get(linkId).push(nodeUrl);
             continue;
         }
-        const edgeUrls = nodeUrl + linkUrl;
-        if (addedEdges.has(edgeUrls)) {
-            continue;
-        }
-        addedEdges.add(edgeUrls);
-        chart.data.datasets[0].edges.push({source: nodeUrl, target: linkUrl, webPageId: ownerId});
+        addEdge(nodeUrl, linkUrl, ownerId);
     }
     const pendingLinks = pendingNodeLinks.get(node.id);
-    if (pendingLinks === undefined) {
-        return;
+    if (pendingLinks !== undefined) {
+        for (const linkUrl of pendingLinks) {
+            addEdge(linkUrl, nodeUrl, ownerId);
+        }
+        pendingNodeLinks.delete(node.id);
     }
-    for (const linkUrl of pendingLinks) {
-        chart.data.datasets[0].edges.push({source: linkUrl, target: nodeUrl, webPageId: ownerId});
-    }
-    pendingNodeLinks.delete(node.id);
 }
 
+function addEdge(sourceUrl, targetUrl, ownerId) {
+    const edgeUrls = sourceUrl + targetUrl;
+    if (!edgeWebPageIds.has(edgeUrls)) {
+        chart.data.datasets[0].edges.push({source: sourceUrl, target: targetUrl});
+        edgeWebPageIds.set(edgeUrls, new Set());
+    }
+    edgeWebPageIds.get(edgeUrls).add(ownerId);
+}
 
 function clearGraph() {
     chart.data.labels = [];
@@ -275,7 +291,8 @@ function clearGraph() {
     chart.update();
     nodeWebPageIds.clear();
     nodeIdToUrl.clear();
-    addedEdges.clear();
+    urlToNodeHeap.clear();
+    edgeWebPageIds.clear();
     pendingNodeLinks.clear();
 }
 
@@ -289,42 +306,47 @@ function addSubgraph(nodes) {
         const ownerId = getNodeOwnerId(node);
         for (const link of node.links) {
             const linkUrl = convertUrl(link.url);
-            const edgeUrls = nodeUrl + linkUrl;
-            if (addedEdges.has(edgeUrls)) {
-                continue;
-            }
-            addedEdges.add(edgeUrls);
-            chart.data.datasets[0].edges.push({source: nodeUrl, target: linkUrl, webPageId: ownerId});
+            addEdge(nodeUrl, linkUrl, ownerId);
         }
     }
     chart.update();
 }
 
+const crawlTimeComparator = (a, b) => b.crawlTime.getTime() - a.crawlTime.getTime();
+
 function addNode(node) {
     const url = convertUrl(node.url);
-    const title = getNodeTitle(node);
     const crawlTime = node.crawlTime != null ? new Date(node.crawlTime) : null;
     const ownerId = getNodeOwnerId(node);
+    const graphNode = {title: getNodeTitle(node), url: url, crawlTime: crawlTime, ownerId: ownerId};
     nodeIdToUrl.set(node?._id ?? node.id, url);
     const dataset = chart.data.datasets[0];
     if (!nodeWebPageIds.has(url)) {
         // Create a new node
-        const graphNode = {title: title, url: url, crawlTime: crawlTime};
         dataset.data.push(graphNode);
         dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
         chart.data.labels.push(url);
         nodeWebPageIds.set(url, new Set([ownerId]));
+        const nodeHeap = new Heap(crawlTimeComparator);
+        urlToNodeHeap.set(url, nodeHeap);
+        if (crawlTime !== null) {
+            nodeHeap.add(graphNode);
+        }
     } else {
         const webPageIds = nodeWebPageIds.get(url);
         webPageIds.add(ownerId);
-        if (node.crawlTime === null) {
+        if (crawlTime === null) {
             return;
         }
-        const index = dataset.data.findIndex((node) => node.url === url);
-        const graphNode = dataset.data[index];
-        graphNode.title = title;
-        graphNode.crawlTime = crawlTime;
+        const nodeHeap = urlToNodeHeap.get(url);
+        nodeHeap.add(graphNode);
+        // TODO: optimize this
+        const index = dataset.data.findIndex((n) => n.url === url);
+        dataset.data[index] = nodeHeap.peek();
         dataset.pointBackgroundColor[index] = 'steelblue';
+        if (selectedNodeUrl === url) {
+            showNodeDetail(index);
+        }
     }
 }
 
@@ -345,20 +367,42 @@ const convertUrl = (url) => viewMode === 'web' ? url : (new URL(url)).hostname;
 
 function removeSubgraph(webPageId) {
     const nodes = chart.data.datasets[0].data;
-    const edges = chart.data.datasets[0].edges;
+    const colors = chart.data.datasets[0].pointBackgroundColor;
 
     const removedNodeIndices = [];
     nodes.forEach((node, index) => {
         const webPageIds = nodeWebPageIds.get(node.url);
-        webPageIds.delete(webPageId);
+        const nodeHeap = urlToNodeHeap.get(node.url);
+        let removedFromHeap = false;
+        if (webPageIds.delete(webPageId) && node.crawlTime !== null) {
+            removedFromHeap = nodeHeap.remove({ownerId: webPageId}, (a, b) => a.ownerId === b.ownerId);
+        }
         if (webPageIds.size === 0) {
             removedNodeIndices.push(index);
             nodeWebPageIds.delete(node.url);
+            urlToNodeHeap.delete(node.url);
+            if (selectedNodeUrl === node.url) {
+                hideNodeDetail();
+            }
+        } else {
+            if (removedFromHeap) {
+                const latestNode = nodeHeap.peek();
+                if (latestNode !== undefined) {
+                    nodes[index] = latestNode;
+                    colors[index] = 'steelblue';
+                } else {
+                    nodes[index] = {title: 'Uncrawled page', url: node.url, crawlTime: null};
+                    colors[index] = 'grey';
+                }
+            }
+            if (selectedNodeUrl === node.url) {
+                showNodeDetail(index);
+            }
         }
     });
     removedNodeIndices.toReversed().forEach((index) => {
         chart.data.labels.splice(index, 1);
-        chart.data.datasets[0].pointBackgroundColor.splice(index, 1);
+        colors.splice(index, 1);
         const node = nodes.splice(index, 1)[0];
         delete node.x;
         delete node.y;
@@ -366,16 +410,18 @@ function removeSubgraph(webPageId) {
         delete node.vy;
     });
 
+    const edges = chart.data.datasets[0].edges;
     const removedEdgeIndices = [];
     edges.forEach((edge, index) => {
-        if (edge.webPageId === webPageId) {
+        const edgeUrls = edge.source + edge.target;
+        const webPageIds = edgeWebPageIds.get(edgeUrls);
+        webPageIds.delete(webPageId);
+        if (webPageIds.size === 0) {
             removedEdgeIndices.push(index);
-            addedEdges.delete(edge.source + edge.target);
+            edgeWebPageIds.delete(edgeUrls);
         }
     });
-    removedEdgeIndices.toReversed().forEach((index) => {
-        edges.splice(index, 1);
-    });
+    removedEdgeIndices.toReversed().forEach((index) => edges.splice(index, 1));
 
     chart.update();
     chart.reset();
@@ -429,7 +475,7 @@ async function postWebPage(url) {
     const body = {
         label: parsedUrl.hostname,
         url: url,
-        regexp: '/' + parsedUrl.origin.replaceAll('/', '\\/').replaceAll('.', '\\.') +  '\\/.*/',
+        regexp: '/^' + parsedUrl.origin.replaceAll('/', '\\/').replaceAll('.', '\\.') +  '\\/.*/',
         active: true,
         tags: ['graph'],
         periodicity: "2024-12-12T12:00:00",
