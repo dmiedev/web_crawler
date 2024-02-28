@@ -1,6 +1,9 @@
 import {Controller} from '@hotwired/stimulus';
 import { Heap } from 'heap-js';
 
+const crawledNodeColor = 'steelblue';
+const uncrawledNodeColor = 'grey';
+
 /** @type Array<Object> */
 let webPages = null;
 
@@ -324,7 +327,7 @@ function addNode(node) {
     if (!nodeWebPageIds.has(url)) {
         // Create a new node
         dataset.data.push(graphNode);
-        dataset.pointBackgroundColor.push(node.crawlTime != null ? 'steelblue' : 'grey');
+        dataset.pointBackgroundColor.push(node.crawlTime != null ? crawledNodeColor : uncrawledNodeColor);
         chart.data.labels.push(url);
         nodeWebPageIds.set(url, new Set([ownerId]));
         const nodeHeap = new Heap(crawlTimeComparator);
@@ -334,16 +337,16 @@ function addNode(node) {
         }
     } else {
         const webPageIds = nodeWebPageIds.get(url);
+        const addedToHeapBefore = webPageIds.has(ownerId);
         webPageIds.add(ownerId);
-        if (crawlTime === null) {
+        if (crawlTime === null || addedToHeapBefore) {
             return;
         }
         const nodeHeap = urlToNodeHeap.get(url);
         nodeHeap.add(graphNode);
-        // TODO: optimize this
         const index = dataset.data.findIndex((n) => n.url === url);
         dataset.data[index] = nodeHeap.peek();
-        dataset.pointBackgroundColor[index] = 'steelblue';
+        dataset.pointBackgroundColor[index] = crawledNodeColor;
         if (selectedNodeUrl === url) {
             showNodeDetail(index);
         }
@@ -389,10 +392,10 @@ function removeSubgraph(webPageId) {
                 const latestNode = nodeHeap.peek();
                 if (latestNode !== undefined) {
                     nodes[index] = latestNode;
-                    colors[index] = 'steelblue';
+                    colors[index] = crawledNodeColor;
                 } else {
                     nodes[index] = {title: 'Uncrawled page', url: node.url, crawlTime: null};
-                    colors[index] = 'grey';
+                    colors[index] = uncrawledNodeColor;
                 }
             }
             if (selectedNodeUrl === node.url) {
