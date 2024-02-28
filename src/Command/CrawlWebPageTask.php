@@ -46,7 +46,7 @@ class CrawlWebPageTask extends ContainerAwareTask
             try {
                 $nodeRepository->saveChanges();
             } catch (UniqueConstraintViolationException $e) {
-               // No-op
+                $this->resetEntityManager();
             }
             return [];
         }

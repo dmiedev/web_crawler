@@ -170,7 +170,7 @@ function hideNodeDetail() {
 
 async function createWebPage(url) {
     if (viewMode === 'domain') {
-        url = 'https://' + url;
+        url = 'https://' + url + '/';
     }
     const webPage = await postWebPage(url);
     if (webPage == null) {
@@ -179,12 +179,16 @@ async function createWebPage(url) {
     hideNodeDetail();
     selectedWebPageIds.add(webPage.id);
     if (eventSource === null) {
-        await reloadGraph();
-        subscribeToMercure();
-        document.getElementById('live-mode').checked = true;
+        await turnOnLiveMode();
     }
     createWebPageListItem(webPage);
     webPages.push({_id: webPage.id, label: webPage.label});
+}
+
+async function turnOnLiveMode() {
+    await reloadGraph();
+    subscribeToMercure();
+    document.getElementById('live-mode').checked = true;
 }
 
 function createWebPageListItem(webPage) {
@@ -303,7 +307,9 @@ function addSubgraph(nodes) {
     for (const node of nodes) {
         addNode(node);
     }
-    chart.reset();
+    if (nodes.length > 1) {
+        chart.reset();
+    }
     for (const node of nodes) {
         const nodeUrl = convertUrl(node.url);
         const ownerId = getNodeOwnerId(node);
@@ -462,15 +468,18 @@ async function fetchWebPages() {
 }
 
 async function executeWebPage(id) {
+    if (eventSource === null) {
+        await turnOnLiveMode();
+    }
     const response = await fetch(window.location.origin + `/api/web_pages/${id}/execute`, {
         method: 'POST',
         headers: {"Content-Type": "application/json", "Accept": "application/json"},
     });
     if (!response.ok) {
         self.alert('Failed to execute web page!');
-    } else {
-        self.alert('Executed web page!');
+        return;
     }
+    self.alert('Executed web page!');
 }
 
 async function postWebPage(url) {
